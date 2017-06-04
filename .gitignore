@@ -1,0 +1,9 @@
+*.csv
+*.pkl
+*.xlsx
+PythonScripts/
+*.stats
+out.txt
+__pycache__/
+*.ipynb_checkpoints/
+*.ipynb
