@@ -9,6 +9,7 @@ import pandas as pd
 import numpy as np
 
 #from lib.gftTools import gftIO
+from lib.gftTools import gsConst
 
 DAILY = 252
 WEEKLY = 52
@@ -38,7 +39,7 @@ def cal_max_dd(df_single_return):
     # drawdown series
     df_perform_drawdown = df_perform_equity_curve / df_perform_cum_max - 1
     max_dd = df_perform_drawdown.min()
-    val = max_dd.values.astype(np.float)
+    val = max_dd.values[0].astype(np.float)
     return val
 
 
@@ -53,7 +54,7 @@ def cum_returns(df_single_return):
 
     Returns
     -------
-    pd.Series, np.ndarray, or pd.DataFrame
+    float
         Series of cumulative returns, starting value from 0.
 
     """
@@ -65,9 +66,12 @@ def cum_returns(df_single_return):
         df_single_return = df_single_return.copy()
         df_single_return[np.isnan(df_single_return)] = 0.
 
-    df_cum = (df_single_return + 1).cumprod(axis=0)
+    df_cum = (df_single_return + 1).cumprod(axis=0) - 1
 
-    return df_cum - 1
+    cum_val = np.array(df_cum)
+    # print(type(cum_val))
+
+    return cum_val[-1][-1]
 
 
 def annual_return(df_single_return, period=DAILY):
@@ -96,7 +100,7 @@ def annual_return(df_single_return, period=DAILY):
     num_years = float(len(df_single_return)) / period
 
     # Pass array to ensure index -1 looks up successfully.
-    cum_ret = cum_returns(np.asanyarray(df_single_return))[-1]
+    cum_ret = cum_returns(np.asanyarray(df_single_return))
     f_annual_return = (1. + cum_ret) ** (1. / num_years) - 1
 
     return f_annual_return
@@ -126,8 +130,9 @@ def sharpe_ratio(df_single_returns, f_risk_free_rate):
     if len(df_single_returns) < 2:
         return np.nan
 
-    return (df_single_returns.mean() - f_risk_free_rate) /\
-        df_single_returns.std().values.astype(np.float)
+    annual_ret = annual_return(df_single_returns)
+    annual_vol = annual_volatility(df_single_returns)
+    return (annual_ret - f_risk_free_rate) / annual_vol
 
 
 def sortino_ratio(df_single_returns, required_return=0,
@@ -153,13 +158,13 @@ def sortino_ratio(df_single_returns, required_return=0,
     f_mu = annual_return(df_single_returns)
 
     dsr = (_downside_risk if _downside_risk is not None
-           else downside_risk(df_single_returns))
+           else annual_downside_risk(df_single_returns))
     sortino = (f_mu - required_return) / dsr
 
     return sortino
 
 
-def downside_risk(df_single_returns, required_return=0, period=DAILY):
+def annual_downside_risk(df_single_returns, required_return=0, period=DAILY):
     """
     Determines the downside deviation below a threshold
 
@@ -191,16 +196,16 @@ def downside_risk(df_single_returns, required_return=0, period=DAILY):
     if len(df_single_returns) < 1:
         return np.nan
 
-    downside_diff = df_single_returns.copy()
+    downside_diff = (df_single_returns - df_single_returns.mean()).copy()
     mask = downside_diff > 0
     downside_diff[mask] = 0.0
+
     squares = np.square(downside_diff)
-    mean_squares = squares.mean()
+    mean_squares = np.mean(squares)
+
     dside_risk = np.sqrt(mean_squares) * np.sqrt(period)
 
-    if len(df_single_returns.shape) == 2 and isinstance(df_single_returns, pd.DataFrame):
-        dside_risk = pd.Series(dside_risk, index=df_single_returns.columns)
-    return dside_risk.values.astype(np.float)
+    return dside_risk.values[0].astype(np.float)
 
 
 def downside_std(df_single_returns):
@@ -261,7 +266,7 @@ def int_trading_days(df_single_returns):
     return trading_days
 
 
-def annual_volatility(df_single_returns):
+def annual_volatility(df_single_returns, period=DAILY):
     """
     Determines the annual volatility of a strategy.
 
@@ -281,9 +286,9 @@ def annual_volatility(df_single_returns):
 
     std = df_single_returns.std(ddof=1)
 
-    volatility = std * (DAILY ** (1.0 / 2))
+    volatility = std * (period ** (1.0 / 2))
 
-    return volatility.values.astype(np.float)
+    return volatility.values[0].astype(np.float)
 
 
 def return_std(df_single_returns):
@@ -306,10 +311,10 @@ def return_std(df_single_returns):
 
     std = df_single_returns.std(ddof=1)
 
-    return std.values.astype(np.float)
+    return std.values[0].astype(np.float)
 
 
-def U_PNL_FITNESS(df_single_period_return, f_risk_free_rate, dt_periods=None):
+def U_PNL_FITNESS(df_single_period_return, f_risk_free_rate, dt_periods=DAILY):
     """
     calculate pnl fitness for a strategy.
 
@@ -323,19 +328,31 @@ def U_PNL_FITNESS(df_single_period_return, f_risk_free_rate, dt_periods=None):
     result, dictionary
         fitness of returns.
     """
-    # df_single_period_return = df_single_period_return.asMatrix()
+    result = OrderedDict()
+    result[gsConst.Const.AnnualReturn] = annual_return(df_single_period_return,
+                                                       dt_periods)
+    result[gsConst.Const.AnnualVolatility] = annual_volatility(
+        df_single_period_return, dt_periods)
+    result[gsConst.Const.AnnualDownVolatility] = annual_downside_risk(
+        df_single_period_return, period=dt_periods)
+    result[gsConst.Const.CumulativeReturn] = cum_returns(
+        df_single_period_return)
+    result[gsConst.Const.DownStdReturn] = downside_std(df_single_period_return)
+    result[gsConst.Const.StartDate] = df_single_period_return.index[0]
+    result[gsConst.Const.EndDate] = df_single_period_return.index[-1]
+    result[gsConst.Const.MaxDrawdownRate] = cal_max_dd(df_single_period_return)
+    result[gsConst.Const.StdReturn] = return_std(df_single_period_return)
+    result[gsConst.Const.SharpeRatio] = sharpe_ratio(df_single_period_return,
+                                                     f_risk_free_rate)
+    result[gsConst.Const.SortinoRatio] = sortino_ratio(df_single_period_return,
+                                                       f_risk_free_rate)
+    result[gsConst.Const.TotalTradingDays] = int_trading_days(
+        df_single_period_return)
 
-    # df_single_period_return = pd.read_csv('data/single_return.csv', index_col=0)
-    # df_single_period_return.index = pd.to_datetime(df_single_period_return.index)
-    # df_single_period_return = df_single_period_return.ix['2015-06-02':]
-    # f_risk_free_rate = 0.015
-    pass
+    return result
 
-# df_single_period_return = pd.read_csv('data/single_return.csv', index_col=0)
-# df_single_period_return.index = pd.to_datetime(df_single_period_return.index)
-# df_single_period_return = df_single_period_return.ix['2015-06-02':]
 
-data = range(100, 110)
+data = [100, 101, 100, 101, 102, 103, 104, 105, 106, 107]
 dates = pd.date_range('1/1/2000', periods=10)
 df_price = pd.DataFrame(data, index=dates, columns=['price'])
 df_single_period_return = df_price / df_price.shift(1) - 1
@@ -344,9 +361,9 @@ f_risk_free_rate = 0.015
 result = OrderedDict()
 result['annualized_return'] = annual_return(df_single_period_return)
 result['annualized_volatility'] = annual_volatility(df_single_period_return)
-result['annualized_downrisk_vol'] = downside_risk(df_single_period_return)
-result['cumlative_return'] = cum_returns(df_single_period_return).\
-                             ix[-1].values.astype(np.float)
+result['annualized_downrisk_vol'] = annual_downside_risk(
+    df_single_period_return)
+result['cumlative_return'] = cum_returns(df_single_period_return)
 result['downside_std'] = downside_std(df_single_period_return)
 result['start_date'] = df_single_period_return.index[0]
 result['end_date'] = df_single_period_return.index[-1]
@@ -357,7 +374,7 @@ result['sharpe_ratio'] = sharpe_ratio(df_single_period_return,
 result['sornito_ratio'] = sortino_ratio(df_single_period_return,
                                         f_risk_free_rate)
 result['trading_days'] = int_trading_days(df_single_period_return)
-print result
+print (result)
 #     return result
 
 # if __name__ == '__main__':
