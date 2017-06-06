@@ -8,7 +8,7 @@ from collections import OrderedDict
 import pandas as pd
 import numpy as np
 
-#from lib.gftTools import gftIO
+from lib.gftTools import gftIO
 from lib.gftTools import gsConst
 
 DAILY = 252
@@ -351,38 +351,39 @@ def U_PNL_FITNESS(df_single_period_return, f_risk_free_rate, dt_periods=DAILY):
 
     return result
 
-
-data = [100, 101, 100, 101, 102, 103, 104, 105, 106, 107]
-dates = pd.date_range('1/1/2000', periods=10)
-df_price = pd.DataFrame(data, index=dates, columns=['price'])
-df_single_period_return = df_price / df_price.shift(1) - 1
-
-f_risk_free_rate = 0.015
-result = OrderedDict()
-result['annualized_return'] = annual_return(df_single_period_return)
-result['annualized_volatility'] = annual_volatility(df_single_period_return)
-result['annualized_downrisk_vol'] = annual_downside_risk(
-    df_single_period_return)
-result['cumlative_return'] = cum_returns(df_single_period_return)
-result['downside_std'] = downside_std(df_single_period_return)
-result['start_date'] = df_single_period_return.index[0]
-result['end_date'] = df_single_period_return.index[-1]
-result['max_dd'] = cal_max_dd(df_single_period_return)
-result['return_std'] = return_std(df_single_period_return)
-result['sharpe_ratio'] = sharpe_ratio(df_single_period_return,
-                                      f_risk_free_rate)
-result['sornito_ratio'] = sortino_ratio(df_single_period_return,
-                                        f_risk_free_rate)
-result['trading_days'] = int_trading_days(df_single_period_return)
-print (result)
-#     return result
-
 # if __name__ == '__main__':
-#     df_single_period_return = pd.read_csv('data/single_return.csv', index_col=0)
-#     df_single_period_return.index = pd.to_datetime(df_single_period_return.index)
-#     df_single_period_return = df_single_period_return.ix['2015-06-02':]
+#     data = [100, 101, 100, 101, 102, 103, 104, 105, 106, 107]
+#     dates = pd.date_range('1/1/2000', periods=10)
+#     df_price = pd.DataFrame(data, index=dates, columns=['price'])
+#     df_single_period_return = df_price / df_price.shift(1) - 1
 #     f_risk_free_rate = 0.015
 #     result = U_PNL_FITNESS(df_single_period_return, f_risk_free_rate)
 
-#     print(result)
+# result = OrderedDict()
+# result['annualized_return'] = annual_return(df_single_period_return)
+# result['annualized_volatility'] = annual_volatility(df_single_period_return)
+# result['annualized_downrisk_vol'] = annual_downside_risk(
+#     df_single_period_return)
+# result['cumlative_return'] = cum_returns(df_single_period_return)
+# result['downside_std'] = downside_std(df_single_period_return)
+# result['start_date'] = df_single_period_return.index[0]
+# result['end_date'] = df_single_period_return.index[-1]
+# result['max_dd'] = cal_max_dd(df_single_period_return)
+# result['return_std'] = return_std(df_single_period_return)
+# result['sharpe_ratio'] = sharpe_ratio(df_single_period_return,
+#                                       f_risk_free_rate)
+# result['sornito_ratio'] = sortino_ratio(df_single_period_return,
+#                                         f_risk_free_rate)
+# result['trading_days'] = int_trading_days(df_single_period_return)
+# print (result)
+
+if __name__ == '__main__':
+    path = '../data/'
+    df_single_period_return = pd.read_csv(path + 'single_return.csv', index_col=0)
+    df_single_period_return.index = pd.to_datetime(df_single_period_return.index)
+    df_single_period_return = df_single_period_return.ix['2015-06-02':]
+    f_risk_free_rate = 0.015
+    result = U_PNL_FITNESS(df_single_period_return, f_risk_free_rate)
+
+    print(result)
 
