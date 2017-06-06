@@ -31,22 +31,26 @@ dataPack['additional_Ts'] = dataPack.pop('x10')
 
 dataPack['execute_price'] = dataPack['execute_price'].asMatrix()
 dataPack['execute_price_return'] = dataPack['execute_price_return'].asMatrix()
-dataPack['market_to_market_price'] = dataPack['market_to_market_price'].asMatrix()
-dataPack['target_portfolio_weight'] = dataPack['target_portfolio_weight'].asMatrix()
+dataPack['market_to_market_price'] = dataPack['market_to_market_price'].\
+                                     asMatrix()
+dataPack['target_portfolio_weight'] = dataPack['target_portfolio_weight'].\
+                                      asMatrix()
 dataPack['total_return_factor'] = dataPack['total_return_factor'].asMatrix()
-dataPack['trade_volume'] = dataPack['trade_volume'].asMatrix()    
+dataPack['trade_volume'] = dataPack['trade_volume'].asMatrix()
 
-#print('data', pprint.pprint(dataPack))
-#with open('data.pkl', 'rb') as fo:
+# print('data', pprint.pprint(dataPack))
+# with open('data.pkl', 'rb') as fo:
 #        pickle.dump(dataPack, fo)
-#output = open('data.pkl', 'wb')
+# output = open('data.pkl', 'wb')
 #
-## Pickle dictionary using protocol 0.
-#pickle.dump(dataPack['trading_param'], output, protocol=1)
-#output.close()
+# # Pickle dictionary using protocol 0.
+# pickle.dump(dataPack['trading_param'], output, protocol=1)
+# output.close()
 
-#ls_data_name = ['execute_price', 'execute_price_return', 'market_to_market_price',\
-#                'target_portfolio_weight', 'total_return_factor', 'trade_volume']
+# ls_data_name = ['execute_price', 'execute_price_return', \
+#    'market_to_market_price',\
+#                'target_portfolio_weight', 'total_return_factor',\
+# 'trade_volume']
 
 dates = pd.to_datetime(dataPack['begin_date'], format = '%Y%m%d')
 dataPack['begin_date'] = dates.strftime('%Y-%m-%d')[0]
@@ -59,8 +63,8 @@ for name in list(dataPack.keys()):
     output.close()
 
 
-#output = open('trading_param.pkl', 'wb')
+# output = open('trading_param.pkl', 'wb')
 #
-## Pickle dictionary using protocol 0.
-#pickle.dump(dataPack['trading_param'], output, protocol=1)
-#output.close()
+# # Pickle dictionary using protocol 0.
+# pickle.dump(dataPack['trading_param'], output, protocol=1)
+# output.close()
