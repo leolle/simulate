@@ -49,12 +49,12 @@ def statistics(weights):
     ''' Return portfolio statistics.
 
     Parameters
-    ==========
+    ----------
     weights : array-like
         weights for different securities in portfolio
 
     Returns
-    =======
+    -------
     pret : float
         expected portfolio return
     pvol : float
@@ -122,3 +122,4 @@ def portfolio_optimization(target_mode, position_limit, covariance_matrix,
 
     """
     pass
+

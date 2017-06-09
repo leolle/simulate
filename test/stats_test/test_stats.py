@@ -29,7 +29,8 @@ class UtilsTestCase(TestCase):
 
     def test_annualized_downrisk_vol(self):
         self.assertAlmostEqual(0.092421812073504264,
-                               annual_downside_risk(self.df_single_period_return))
+                               annual_downside_risk(
+                                   self.df_single_period_return))
 
     def test_cumulative_return(self):
         self.assertAlmostEqual(0.070000000000000062,
