@@ -17,7 +17,7 @@ All = slice(None)
 #     target_portfolio_wgt.index = dates
 #     target_portfolio_wgt.columns = index
 
-class UtilsTestCase(TestCase):  
+class UtilsTestCase(TestCase):
     @classmethod
     def setUpClass(cls):
         cls.dates = pd.date_range('1/1/2000', periods=8)
