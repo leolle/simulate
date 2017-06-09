@@ -62,9 +62,17 @@ for name in list(dataPack.keys()):
     pickle.dump(dataPack[name], output, protocol=1)
     output.close()
 
+pickle.dump(dataPack[name], open("x1.pkl", "wb"))
 
 # output = open('trading_param.pkl', 'wb')
 #
 # # Pickle dictionary using protocol 0.
 # pickle.dump(dataPack['trading_param'], output, protocol=1)
 # output.close()
+pickle.dump(x0, open("x0.pkl", "wb"))
+pickle.dump(x1, open("x1.pkl", "wb"))
+pickle.dump(x2, open("x2.pkl", "wb"))
+pickle.dump(x3, open("x3.pkl", "wb"))
+pickle.dump(x4, open("x4.pkl", "wb"))
+pickle.dump(x5, open("x5.pkl", "wb"))
+pickle.dump(x6, open("x6.pkl", "wb"))

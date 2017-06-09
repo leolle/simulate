@@ -3,18 +3,12 @@
 Spyder Editor
 
 """
-from collections import OrderedDict
-
+# -*- coding: utf-8 -*-
 import pandas as pd
 import numpy as np
 
 from lib.gftTools import gftIO
 from lib.gftTools import gsConst
-
-DAILY = 252
-WEEKLY = 52
-MONTHLY = 12
-YEARLY = 1
 
 
 def cal_max_dd(df_single_return):
@@ -69,12 +63,47 @@ def cum_returns(df_single_return):
     df_cum = (df_single_return + 1).cumprod(axis=0) - 1
 
     cum_val = np.array(df_cum)
-    # print(type(cum_val))
+    #print(type(cum_val))
 
     return cum_val[-1][-1]
 
 
-def annual_return(df_single_return, period=DAILY):
+def aggregate_returns(df_single_return, convert_to):
+    """
+    Aggregates returns by week, month, or year.
+
+    Parameters
+    ----------
+    df_single_return : pd.DataFrame
+        Daily returns of the strategy, noncumulative.
+    convert_to : int
+        Can be '1 day', '1 month', '3 months', or '3 months', '6 months', 
+        '1 year', '3 years'.
+
+    Returns
+    -------
+    pd.Series
+        Aggregated returns.
+    """
+
+    def cumulate_returns(x):
+        return cum_returns(x).iloc[-1]
+
+    if convert_to == 7:
+        grouping = [lambda x: x.year, lambda x: x.isocalendar()[1]]
+    elif convert_to == 21:
+        grouping = [lambda x: x.year, lambda x: x.month]
+    elif convert_to == 252:
+        grouping = [lambda x: x.year]
+    else:
+        raise ValueError(
+            'convert_to must be in format(days, months, years)'
+        )
+
+    return returns.groupby(grouping).apply(cumulate_returns)
+
+
+def annual_return(df_single_return, period=gsConst.Const.DAILY):
     """Determines the mean annual growth rate of returns.
 
     Parameters
@@ -164,7 +193,7 @@ def sortino_ratio(df_single_returns, required_return=0,
     return sortino
 
 
-def annual_downside_risk(df_single_returns, required_return=0, period=DAILY):
+def annual_downside_risk(df_single_returns, required_return=0, period=gsConst.Const.DAILY):
     """
     Determines the downside deviation below a threshold
 
@@ -266,7 +295,7 @@ def int_trading_days(df_single_returns):
     return trading_days
 
 
-def annual_volatility(df_single_returns, period=DAILY):
+def annual_volatility(df_single_returns, period=gsConst.Const.DAILY):
     """
     Determines the annual volatility of a strategy.
 
@@ -314,7 +343,149 @@ def return_std(df_single_returns):
     return std.values[0].astype(np.float)
 
 
-def U_PNL_FITNESS(df_single_period_return, f_risk_free_rate, dt_periods=DAILY):
+def max_holding_num(df_holding):
+    """
+    Determines the maximum asset holding number for a strategy.
+
+    Parameters
+    ----------
+    df_holding : pd.DataFrame or np.ndarray
+        Historical holding of the strategy.
+
+    Returns
+    -------
+    int
+        Maximum assets holding number.
+    """
+
+    if len(df_holding) < 1:
+        return np.nan
+
+    max_holding_number = df_holding.count(axis=1).max()
+
+    return max_holding_number
+
+
+def min_holding_num(df_holding):
+    """
+    Determines the minimum asset holding number for a strategy.
+
+    Parameters
+    ----------
+    df_holding : pd.DataFrame or np.ndarray
+        Historical holding of the strategy.
+
+    Returns
+    -------
+    int
+        Minimum assets holding number.
+    """
+
+    if len(df_holding) < 1:
+        return np.nan
+
+    max_holding_number = df_holding.count(axis=1).min()
+
+    return min_holding_number
+
+
+def average_holding_num(df_holding):
+    """
+    Determines the average asset holding number for a strategy.
+
+    Parameters
+    ----------
+    df_holding : pd.DataFrame or np.ndarray
+        Historical holding of the strategy.
+
+    Returns
+    -------
+    float
+        Average assets holding number.
+    """
+
+    if len(df_holding) < 1:
+        return np.nan
+
+    average_holding_number = df_holding.count(axis=1).mean()
+
+    return average_holding_number
+
+
+def latest_holding_num(df_holding):
+    """
+    Determines the latest asset holding number for a strategy.
+
+    Parameters
+    ----------
+    df_holding : pd.DataFrame or np.ndarray
+        Historical holding of the strategy.
+
+    Returns
+    -------
+    int
+        Latest assets holding number.
+    """
+
+    if len(df_holding) < 1:
+        return np.nan
+
+    latest_holding_number = df_holding.count(axis=1).ix[-1]
+
+    return latest_holding_number
+
+
+def average_holding_num_percentage(df_holding, df_universe):
+    """
+    Determines the average asset holding percentage for a strategy.
+
+    Parameters
+    ----------
+    df_holding : pd.DataFrame or np.ndarray
+        Historical holding of the strategy.
+    df_universe : pd.DataFrame or np.ndarray
+        Historical universe of the strategy.
+
+    Returns
+    -------
+    float
+        Mean assets holding number percentage.
+    """
+
+    if len(df_holding) < 1:
+        return np.nan
+
+    avg_holding_num_pct = (df_holding.count(axis=1) / df_universe.count(axis=1)).mean()
+
+    return avg_holding_num_pct
+
+
+def latest_holding_num_percentage(df_holding, df_universe):
+    """
+    Determines the latest asset holding percentage for a strategy.
+
+    Parameters
+    ----------
+    df_holding : pd.DataFrame or np.ndarray
+        Historical holding of the strategy.
+    df_universe : pd.DataFrame or np.ndarray
+        Historical universe of the strategy.
+
+    Returns
+    -------
+    float
+        Latest assets holding number percentage.
+    """
+
+    if len(df_holding) < 1:
+        return np.nan
+
+    latest_holding_num_pct = (df_holding.count(axis=1) / df_universe.count(axis=1)).ix[-1]
+
+    return latest_holding_num_pct
+
+
+def PNLFitness(df_single_period_return, f_risk_free_rate, periods, benchmark_ret, holding, closing_price, market_capital):
     """
     calculate pnl fitness for a strategy.
 
@@ -328,27 +499,24 @@ def U_PNL_FITNESS(df_single_period_return, f_risk_free_rate, dt_periods=DAILY):
     result, dictionary
         fitness of returns.
     """
-    result = OrderedDict()
-    result[gsConst.Const.AnnualReturn] = annual_return(df_single_period_return,
-                                                       dt_periods)
-    result[gsConst.Const.AnnualVolatility] = annual_volatility(
-        df_single_period_return, dt_periods)
-    result[gsConst.Const.AnnualDownVolatility] = annual_downside_risk(
-        df_single_period_return, period=dt_periods)
-    result[gsConst.Const.CumulativeReturn] = cum_returns(
-        df_single_period_return)
+    df_single_period_return = df_single_period_return.asMatrix()
+    result = {}
+    result[gsConst.Const.AnnualReturn] = annual_return(df_single_period_return, period=periods)
+    result[gsConst.Const.AnnualVolatility] = annual_volatility(df_single_period_return, period=periods)
+    result[gsConst.Const.AnnualDownVolatility] = annual_downside_risk(df_single_period_return, period=periods)
+    result[gsConst.Const.CumulativeReturn] = cum_returns(df_single_period_return)
     result[gsConst.Const.DownStdReturn] = downside_std(df_single_period_return)
     result[gsConst.Const.StartDate] = df_single_period_return.index[0]
     result[gsConst.Const.EndDate] = df_single_period_return.index[-1]
     result[gsConst.Const.MaxDrawdownRate] = cal_max_dd(df_single_period_return)
     result[gsConst.Const.StdReturn] = return_std(df_single_period_return)
-    result[gsConst.Const.SharpeRatio] = sharpe_ratio(df_single_period_return,
-                                                     f_risk_free_rate)
-    result[gsConst.Const.SortinoRatio] = sortino_ratio(df_single_period_return,
-                                                       f_risk_free_rate)
-    result[gsConst.Const.TotalTradingDays] = int_trading_days(
-        df_single_period_return)
-
+    result[gsConst.Const.SharpeRatio] = sharpe_ratio(df_single_period_return, f_risk_free_rate)
+    result[gsConst.Const.SortinoRatio] = sortino_ratio(df_single_period_return,f_risk_free_rate)
+    result[gsConst.Const.TotalTradingDays] = int_trading_days(df_single_period_return)
+    if len(benchmark_ret)>1:
+        result[gsConst.Const.BenchmarAnnualReturn] = annual_return(benchmark_ret)
+        result[gsConst.Const.Benchmar]
+        
     return result
 
 # if __name__ == '__main__':
@@ -357,9 +525,14 @@ def U_PNL_FITNESS(df_single_period_return, f_risk_free_rate, dt_periods=DAILY):
 #     df_price = pd.DataFrame(data, index=dates, columns=['price'])
 #     df_single_period_return = df_price / df_price.shift(1) - 1
 #     f_risk_free_rate = 0.015
-#     result = U_PNL_FITNESS(df_single_period_return, f_risk_free_rate)
+#     result = PNLFitness(df_single_period_return, f_risk_free_rate)
 
-# result = OrderedDict()
+result = {}
+import pickle
+
+path = '~/projects/simulate/data/stats/'
+x0 = pickle.load(path + 'x4.pkl')
+
 # result['annualized_return'] = annual_return(df_single_period_return)
 # result['annualized_volatility'] = annual_volatility(df_single_period_return)
 # result['annualized_downrisk_vol'] = annual_downside_risk(
@@ -377,13 +550,12 @@ def U_PNL_FITNESS(df_single_period_return, f_risk_free_rate, dt_periods=DAILY):
 # result['trading_days'] = int_trading_days(df_single_period_return)
 # print (result)
 
-if __name__ == '__main__':
-    path = '../data/'
-    df_single_period_return = pd.read_csv(path + 'single_return.csv', index_col=0)
-    df_single_period_return.index = pd.to_datetime(df_single_period_return.index)
-    df_single_period_return = df_single_period_return.ix['2015-06-02':]
-    f_risk_free_rate = 0.015
-    result = U_PNL_FITNESS(df_single_period_return, f_risk_free_rate)
+# if __name__ == '__main__':
+#     path = '../data/'
+#     df_single_period_return = pd.read_csv(path + 'single_return.csv', index_col=0)
+#     df_single_period_return.index = pd.to_datetime(df_single_period_return.index)
+#     df_single_period_return = df_single_period_return.ix['2015-06-02':]
+#     f_risk_free_rate = 0.015
+#     result = U_PNL_FITNESS(df_single_period_return, f_risk_free_rate)
 
-    print(result)
-
+#     print(result)
