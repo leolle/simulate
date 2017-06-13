@@ -181,7 +181,7 @@ class UtilsTestCase(TestCase):
                                                                optv['x'], 3))
 
     def test_min_risk(self, ):
-        test_weight = np.array([ 0.045,  0.461,  0.049,  0.396,  0.049])
+        test_weight = np.array([0.045,  0.461,  0.049,  0.396,  0.049])
         cons = ({'type': 'eq', 'fun': lambda x:  np.sum(x) - 1})
 
         bnds = tuple((0, 1) for x in range(self.noa))
