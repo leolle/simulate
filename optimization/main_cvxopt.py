@@ -34,10 +34,10 @@ index = pd.MultiIndex.from_tuples(zipped)
 noa = len(symbols)
 
 data = np.array([[10, 11, 12, 13, 14, 10],
-                 [10, 11, 12, 13, 14, 13],
-                 [10, 11, 12, 13, 14, 11],
+                 [10, 11, 10, 13, 14, 9],
+                 [10, 10, 12, 13, 9, 11],
                  [10, 11, 12, 13, 14, 8],
-                 [10, 11, 12, 13, 14, 9]])
+                 [10, 9, 12, 13, 14, 9]])
 
 market_to_market_price = pd.DataFrame(data.T, index=dates, columns=index)
 rets = market_to_market_price / market_to_market_price.shift(1) - 1.0
@@ -146,9 +146,28 @@ def maximum_return():
     print(statistics(sol['x']))
 
 
+def minimum_risk():
+
+    P = covs
+    q = matrix(numpy.zeros((n, 1)), tc='d')
+    G = matrix(-np.eye(n))
+    h = matrix(-numpy.zeros((n,1)))
+
+    # equality constraint Ax = b; captures the constraint sum(x) == 1
+    A = matrix(1.0, (1,n))
+    b = matrix(1.0)
+
+    sol = solvers.qp(P, q, G, h, A, b)
+
+    print(minimum_risk.__name__)
+    print(sol['x'])
+    print(statistics(sol['x']))
+
+
 # solve for maximum return and under control risk.
 
 
 
 #minimum_risk_subject_to_target_return()
 maximum_return()
+minimum_risk()
