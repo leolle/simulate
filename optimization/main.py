@@ -27,7 +27,8 @@ data['target_portfolio_weight'] = data.pop('x3')
 df_target_portfolio_weight = data['target_portfolio_weight'].\
                              asMatrix().dropna(axis=0, how='all')
 
-
+target_risk = 0.00087447
+target_return = 0.0262495
 def get_factor_exposure(df_target_weight, risk_model, factor_list, date,
                         symbols):
     ''' Return factor exposure matrix(big X).
@@ -61,24 +62,6 @@ def get_factor_exposure(df_target_weight, risk_model, factor_list, date,
     return factor_exposure
 
 
-def calculate_total_risk(weights, cov_matrix):
-    port_var = np.dot(np.dot(weights.T, cov_matrix), weights)
-    return port_var
-
-
-def max_func_return(weights):
-    return -np.sum(asset_return.ix[:target_date].mean().fillna(0) * weights)
-
-
-def min_func_std(weights, cov_matrix_V):
-    return calculate_total_risk(weights, cov_matrix_V)
-
-
-def min_func_vol(weights):
-    return np.sqrt(np.dot(weights.T, np.dot(
-        asset_return.ix[:target_date].cov(), weights)))
-
-
 def statistics(asset_return, weights, cov_matrix_V):
     ''' Return portfolio statistics.
 
@@ -109,7 +92,7 @@ def statistics(asset_return, weights, cov_matrix_V):
 
 def portfolio_optimization(target_mode, df_position_limit, risk_model,
                            asset_return, df_target_portfolio_weight,
-                           target_risk, target_return):
+                           target_risk, target_return, target_date):
     """
     optimize fund weight target on different constraints, objective, based on
     target type and mode, fund return target, fund weight, group weight， etc.
@@ -159,13 +142,11 @@ def portfolio_optimization(target_mode, df_position_limit, risk_model,
         init_weight = asset_weight.ix[target_date].dropna()
     except KeyError:
         raise KeyError('invalid input date: %s' % target_date)
-    target_symbols = risk_model['specificRisk'].columns.\
-                     intersection(init_weight.index)
+    target_symbols = risk_model['specificRisk'].columns.intersection(init_weight.index)
 
     noa = len(target_symbols)
 
-    all_dates = risk_model['specificRisk'].index.\
-                intersection(df_target_portfolio_weight.index)
+    all_dates = risk_model['specificRisk'].index.intersection(df_target_portfolio_weight.index)
     asset_return = asset_return.asMatrix().loc[all_dates, target_symbols]
     asset_weight = df_target_portfolio_weight.loc[:, target_symbols]
 
@@ -196,11 +177,57 @@ def portfolio_optimization(target_mode, df_position_limit, risk_model,
     cov_matrix = covariance_matrix.ix[target_date]
     cov_matrix = cov_matrix.pivot(index='factorid1',
                                   columns='factorid2', values='value')
-    cov_matrix = cov_matrix.reindex(all_factors, all_factors, fill_value=np.nan)
+    cov_matrix = cov_matrix.reindex(all_factors, all_factors,
+                                    fill_value=np.nan)
 
     cov_matrix_V = big_X.dot(cov_matrix).dot(big_X.T) + delta
 
+
+    def calculate_total_risk(weights, cov_matrix):
+        port_var = np.dot(np.dot(weights.T, cov_matrix), weights)
+        return port_var
+
+
+    def max_func_return(weights):
+        return -np.sum(asset_return.ix[:target_date].mean().fillna(0) * weights)
+
+
+    def minimum_variance(weights):
+        return calculate_total_risk(weights, cov_matrix_V)
+
+
+    def min_func_vol(weights):
+        return np.sqrt(np.dot(weights.T, np.dot(
+            asset_return.ix[:target_date].cov(), weights)))
+
+
     optimizer = {
-        0: minimum_variance,
-        1: minimum_total_risk_at_target_return,
-        2: maximum_return_at_target_risk}
+        0: {'fitness': minimum_variance,
+            'bnds': tuple((0, 1) for x in range(noa)),
+            'cons': ({'type': 'eq', 'fun': lambda x:  np.sum(x) - 1})},
+        1: {'fitness': minimum_variance,
+            'bnds': tuple((0, 1) for x in range(noa)),
+            'cons': ({'type': 'eq', 'fun': lambda x:  np.sum(x) - 1},
+                     {'type': 'eq', 'fun': lambda x:
+                      -target_return + np.sum(asset_return.ix
+                                              [:target_date].mean().
+                                              fillna(0) * x)})},
+        2: {'fitness': max_func_return,
+            'bnds': tuple((0, 1) for x in range(noa)),
+            'cons': ({'type': 'eq', 'fun': lambda x:  np.sum(x) - 1},
+                     {'type': 'eq', 'fun': lambda x:
+                      target_risk - calculate_total_risk(x, cov_matrix_V)})}
+        }
+    init_guess = noa * [1. / noa, ]
+    opts = sco.minimize(optimizer[target_mode]['fitness'], init_guess,
+                        method='SLSQP', bounds=optimizer[target_mode]['bnds'],
+                        constraints=optimizer[target_mode]['cons'])
+
+    opts_weight = opts['x']
+
+    return pd.Series(opts_weight, index=target_symbols, name=target_date)
+
+target_mode = 2
+result = portfolio_optimization(target_mode, position_limit, risk_model,
+                                asset_return, data['target_portfolio_weight'],
+                                target_risk, target_return, target_date)

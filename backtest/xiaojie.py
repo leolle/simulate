@@ -33,14 +33,14 @@ def SIMPLE_SIMULATE_DAILY_TRADE_CHN_STK(beginDate, endDate, initialHolding, df_t
     df_tradeVolume = df_tradeVolume.asMatrix()
     cashSymbol = gsUtils.getCashGid()
     godGid = gsUtils.getGodGid()
-    
+
     allDates = df_markToMarketPrice.index
     if len(allDates[(allDates>=beginDate) & (allDates<=endDate)]) < 1:
         raise ValueError('no trading date falls between begindate and enddate')
     endDate = allDates[allDates<=endDate][-1]
     if beginDate > endDate:
         raise ValueError('beginDate should be less than endDate')
-    
+
     initHldIsCash = True
     if isinstance(initialHolding, gftIO.GftTable):
         df_initialHolding = initialHolding.asMatrix()
@@ -56,7 +56,7 @@ def SIMPLE_SIMULATE_DAILY_TRADE_CHN_STK(beginDate, endDate, initialHolding, df_t
         beginDate = gsUtils.alignDate(beginDate, allDates, method='bfill')
         if pd.isnull(beginDate):
             raise ValueError('beginDate should be less than the last trading date')
-            
+
     if (df_targetPortfolioWgt<0).any(axis=1).any():
         raise ValueError('Do not support stock short selling and cash borrowing')
     if (round(df_targetPortfolioWgt.sum(1), 4) > 1).any():
@@ -73,7 +73,7 @@ def SIMPLE_SIMULATE_DAILY_TRADE_CHN_STK(beginDate, endDate, initialHolding, df_t
             idxs[idxs == np.append(idxs[1:], NA)] = NA
             idxs_nonnan_flag = np.logical_not(np.isnan(idxs))
             if sum(idxs_nonnan_flag) < 1:
-                raise ValueError("no trade date after the execute delay shift")   
+                raise ValueError("no trade date after the execute delay shift")
             df_targetPortfolioWgt = df_targetPortfolioWgt.ix[idxs_nonnan_flag]
             rebDates = allDates[np.array(idxs[idxs_nonnan_flag], dtype=int)]
             df_targetPortfolioWgt.index = rebDates
@@ -83,7 +83,7 @@ def SIMPLE_SIMULATE_DAILY_TRADE_CHN_STK(beginDate, endDate, initialHolding, df_t
                     beginDate = rebDates[rebDates>=beginDate][0]
                 if pd.isnull(beginDate):
                     raise ValueError('beginDate is null after shift')
-    
+
     tradeDates = allDates[(allDates>=beginDate) & (allDates<=endDate)]
     beginDate = tradeDates[0]
     endDate = tradeDates[-1]
@@ -204,14 +204,14 @@ def SIMPLE_SIMULATE_DAILY_TRADE_CHN_STK(beginDate, endDate, initialHolding, df_t
                     df_holdings.ix[d] += s_buyExecution                   
             df_holdingCash.ix[d] = cashAvail
             df_turnoverPct.ix[d] <- (df_execution.ix[d].abs()*df_executePrice.ix[d]).sum() / totalValue
-            
+
             if i < (len(rebDates)-1):
                 nextd = rebDates[i+1]
             else:
                 nextd = tradeDates[-1]
             ls_adjustedHoldings = fillHolding(d, nextd, tradeDates, df_holdings, df_holdingCash, df_totalReturnFactor)
             df_holdings = ls_adjustedHoldings['holdings']
-            df_holdingCash = ls_adjustedHoldings['holdingCash']                
+            df_holdingCash = ls_adjustedHoldings['holdingCash']
     
     df_portfolioValue.ix[:, 0] = (df_holdings * df_markToMarketPrice.ix[tradeDates]).sum(axis=1) + df_holdingCash.ix[:, 0] 
     df_weights = (df_holdings * df_markToMarketPrice.ix[tradeDates]).div(df_portfolioValue.ix[:,0], axis=0)    
