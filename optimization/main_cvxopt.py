@@ -73,7 +73,7 @@ def statistics(weights):
     '''
     weights = np.array(weights)
     pret = np.dot(weights.T, rets_mean)
-    pvol = nn.sqrt(p.dot(weights.T, np.dot(covs, weights)))
+    pvol = np.sqrt(np.dot(weights.T, np.dot(covs, weights)))
     # prisk = calculate_total_risk(weights, cov_matrix_V)
 
     return np.array([pret, pvol, pret / pvol])
@@ -82,22 +82,18 @@ def statistics(weights):
 def minimum_risk_subject_to_target_return():
 
     # minimum expected return threshold
-    r_min   = 0.04
-
-
+    r_min = 0.04
 
     P = covs
-
     q = matrix(numpy.zeros((n, 1)), tc='d')
     # inequality constraints Gx <= h
     # captures the constraints (avg_ret'x >= r_min) and (x >= 0)
     G = matrix(-numpy.transpose(numpy.array(avg_ret)))
-    h = matrix(n-numpy.ones((1,1))*r_min
+    h = matrix(-numpy.ones((1,1))*r_min)
 
     # equality constraint Ax = b; captures the constraint sum(x) == 1
     A = matrix(1.0, (1,n))
     b = matrix(1.0)
-
 
     groups = rets.groupby(axis=1, level=0, sort=False, group_keys=False).count().ix[-1].values
     num_group = len(groups)
@@ -120,22 +116,39 @@ def minimum_risk_subject_to_target_return():
     b_group_lower_bound = np.array([x[0] for x in b_group])
     b_group_matrix = matrix(numpy.concatenate((b_group_upper_bound,
                                                -b_group_lower_bound), 0))
-
     h = matrix(sparse([h, b_asset_matrix, b_group_matrix]))
 
-    # solve minimum risk for maximum return above target .    sol = solvers.qp(P, q, G, h, A, b)
+    # solve minimum risk for maximum return above target .
+    sol = solvers.qp(P, q, G, h, A, b)
 
-
-
+    print(minimum_risk_subject_to_target_return.__name__)
     print(sol['x'])
     print(statistics(sol['x']))
 
 
-def maximum_return_subject_to_target_risk():
-     
+#def maximum_return_subject_to_target_risk():
+
+def maximum_return():
+
+    P = matrix(np.zeros((n, n)))
+    q = -avg_ret
+    G = matrix(-np.eye(n))
+    h = matrix(-numpy.zeros((n,1)))
+
+    # equality constraint Ax = b; captures the constraint sum(x) == 1
+    A = matrix(1.0, (1,n))
+    b = matrix(1.0)
+
+    sol = solvers.qp(P, q, G, h, A, b)
+
+    print(maximum_return.__name__)
+    print(sol['x'])
+    print(statistics(sol['x']))
+
+
 # solve for maximum return and under control risk.
 
 
 
 #minimum_risk_subject_to_target_return()
-m
+maximum_return()
