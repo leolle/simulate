@@ -7,6 +7,7 @@
 # Uses actual past stock data, obtained using the stocks module.
 
 from cvxopt import matrix, solvers, spmatrix, sparse
+from cvxopt.blas import dot
 import numpy
 import pandas as pd
 import numpy as np
@@ -126,17 +127,49 @@ def minimum_risk_subject_to_target_return():
     print(statistics(sol['x']))
 
 
-#def maximum_return_subject_to_target_risk():
+def maximum_return_subject_to_target_risk():
+    N = 100
+    mus = [10**(5.0*t/N-1.0) for t in range(N)]
+
+    P = covs
+    q = avg_ret
+    G = matrix(-np.eye(n))
+    h = matrix(-numpy.zeros((n, 1)))
+
+    # equality constraint Ax = b; captures the constraint sum(x) == 1
+    A = matrix(1.0, (1, n))
+    b = matrix(1.0)
+
+    xs = [solvers.qp(mu*covs, q, G, h, A, b)['x'] for mu in mus]
+    returns = [dot(-q.T, x) for x in xs]
+    risks = [np.sqrt(dot(x.T, covs*x)) for x in xs]
+    try: import pylab
+    except ImportError: pass
+    else:
+        pylab.figure(1, facecolor='w')
+        pylab.plot(risks, returns)
+        pylab.xlabel('standard deviation')
+        pylab.ylabel('expected return')
+        pylab.axis([0, 0.2, 0, 0.15])
+        pylab.title('Risk-return trade-off curve')
+        pylab.yticks([0.00, 0.05, 0.10, 0.15])
+        #pylab.show()
+    sol = solvers.qp(P, q, G, h, A, b)
+
+    print(maximum_return_subject_to_target_risk.__name__)
+    print(sol['x'])
+    print(statistics(sol['x']))
+
 
 def maximum_return():
 
     P = matrix(np.zeros((n, n)))
     q = -avg_ret
     G = matrix(-np.eye(n))
-    h = matrix(-numpy.zeros((n,1)))
+    h = matrix(-numpy.zeros((n, 1)))
 
     # equality constraint Ax = b; captures the constraint sum(x) == 1
-    A = matrix(1.0, (1,n))
+    A = matrix(1.0, (1, n))
     b = matrix(1.0)
 
     sol = solvers.qp(P, q, G, h, A, b)
@@ -151,10 +184,10 @@ def minimum_risk():
     P = covs
     q = matrix(numpy.zeros((n, 1)), tc='d')
     G = matrix(-np.eye(n))
-    h = matrix(-numpy.zeros((n,1)))
+    h = matrix(-numpy.zeros((n, 1)))
 
     # equality constraint Ax = b; captures the constraint sum(x) == 1
-    A = matrix(1.0, (1,n))
+    A = matrix(1.0, (1, n))
     b = matrix(1.0)
 
     sol = solvers.qp(P, q, G, h, A, b)
@@ -169,5 +202,32 @@ def minimum_risk():
 
 
 #minimum_risk_subject_to_target_return()
-maximum_return()
-minimum_risk()
+#maximum_return()
+#minimum_risk()
+maximum_return_subject_to_target_risk()
+N = 100
+mus = [10**(5.0*t/N-1.0) for t in range(N)]
+
+P = covs
+q = -avg_ret
+G = matrix(-np.eye(n))
+h = matrix(-numpy.zeros((n, 1)))
+
+# equality constraint Ax = b; captures the constraint sum(x) == 1
+A = matrix(1.0, (1, n))
+b = matrix(1.0)
+
+xs = [solvers.qp(mu*covs, q, G, h, A, b)['x'] for mu in mus]
+returns = [dot(avg_ret.T, x) for x in xs]
+risks = [np.sqrt(dot(x, covs*x)) for x in xs]
+try: import pylab
+except ImportError: pass
+else:
+    pylab.figure(1, facecolor='w')
+    pylab.plot(risks, returns)
+    pylab.xlabel('standard deviation')
+    pylab.ylabel('expected return')
+    pylab.axis([0, 0.2, 0, 0.15])
+    pylab.title('Risk-return trade-off curve')
+    pylab.yticks([0.00, 0.05, 0.10, 0.15])
+   # pylab.show()
