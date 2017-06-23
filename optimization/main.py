@@ -102,8 +102,9 @@ def find_nearest(array, value):
 
 
 def CVXOptimizer(context, target_mode, position_limit, risk_model,
-                 asset_return, asset_weight, target_risk, target_return,
-                 target_date):
+                 asset_return, asset_weight, target_risk,
+                 target_return, target_date, asset_constraint,
+                 group_constraint, exposure_constaint):
     """
     optimize fund weight target on different constraints, objective, based on
     target type and mode, fund return target, fund weight, group weight， etc.
@@ -183,12 +184,20 @@ def CVXOptimizer(context, target_mode, position_limit, risk_model,
         axis=0, subset=['industry', 'symbol'], how='any')
 
     # find intersection symbol between risk model and initial weight
-    try:
-        df_industries_asset_init_weight = df_industries_asset_init_weight.sample(position_limit)
-    except ValueError:
-        print("position limit is bigger than total symbols")
+    # try:
+    #     df_industries_asset_init_weight = df_industries_asset_init_weight.sample(position_limit)
+    # except ValueError:
+    #     print("position limit is bigger than total symbols")
     unique_symbol = df_industries_asset_init_weight['symbol'].unique()
     target_symbols = target_specific_risk.index.intersection(unique_symbol)
+    if position_limit > len(target_symbols):
+        print("position limit is bigger than total symbols")
+        position_limit = len(target_symbols)
+
+    arr = list(range(len(target_symbols)))
+    np.random.shuffle(arr)
+    target_symbols = target_symbols[arr[:position_limit]]
+
     df_industries_asset_target_init_weight = df_industries_asset_init_weight.\
                                              loc[df_industries_asset_init_weight['symbol'].isin(target_symbols)]
     df_pivot_industries_asset_weights = pd.pivot_table(
@@ -312,5 +321,5 @@ def CVXOptimizer(context, target_mode, position_limit, risk_model,
         print('result is optimal')
     elif sol['status'] == 'unknown':
         print('the algorithm failed to find a solution that satisfies the specified tolerances')
-
+        raise('failed')
     return df_opts_weight

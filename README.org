@@ -13,6 +13,14 @@
 
 
 * optimization:
-** TODO position limit
+** DONE position limit
+CLOSED: [2017-06-23 Fri 14:46]
 add position limit will cause rank(A) < p
-** TODO maximum return subject to target risk.
+** DONE maximum return subject to target risk.
+CLOSED: [2017-06-23 Fri 14:46]
+** add more constraint
+default None Value
+** find the reason of why optimal result can't be reached.
+** find the consuming time.
+** factor exposure limit boundary.
+** sharpe portfolio.

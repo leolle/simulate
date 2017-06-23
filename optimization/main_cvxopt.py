@@ -255,7 +255,7 @@ def minimum_risk():
 #minimum_risk_subject_to_target_return()
 #maximum_return()
 #minimum_risk()
-maximum_return_subject_to_target_risk()
+#maximum_return_subject_to_target_risk()
 N = 100
 mus = [10**(5.0*t/N-1.0) for t in range(N)]
 
@@ -291,9 +291,7 @@ num_group = len(groups)
 num_asset = np.sum(groups)
 position_limit = 3
 
-arr = np.array([1] * position_limit + [0] * (n-position_limit))
-np.random.shuffle(arr)
-asset_sub = matrix(np.diag(arr))
+asset_sub = matrix(np.eye(n))
 
 target_return = -0.000996
 G = matrix(-np.transpose(np.array(rets)))
@@ -302,7 +300,7 @@ G_sparse_list = []
 for i in range(num_group):
 	for j in range(groups[i]):
 		G_sparse_list.append(i)
-Group_sub = spmatrix(arr, G_sparse_list, range(num_asset))
+Group_sub = spmatrix(1., G_sparse_list, range(num_asset))
 #position_limit = 500
 #position_limit = n
 #arr = np.array([1] * position_limit + [0] * (n-position_limit))
@@ -310,9 +308,9 @@ Group_sub = spmatrix(arr, G_sparse_list, range(num_asset))
 #asset_sub = matrix(np.diag(arr))
 #asset_sub = matrix(np.eye(n))
 #exp_sub = matrix(np.array(big_X.T*arr))
-exp_sub = matrix(np.array(covs.T*arr))
-G = matrix(sparse([G, asset_sub, -asset_sub, Group_sub, -Group_sub, exp_sub, -exp_sub]))
-#G = matrix(sparse([G, asset_sub, -asset_sub, Group_sub, -Group_sub]))
-print('arr', arr)
+exp_sub = matrix(np.array(covs.T))
+#G = matrix(sparse([G, asset_sub, -asset_sub, Group_sub, -Group_sub, exp_sub, -exp_sub]))
+G = matrix(sparse([G, asset_sub, -asset_sub, Group_sub, -Group_sub, matrix([])]))
+
 print('G', G)
 print('h', h)
