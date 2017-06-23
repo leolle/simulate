@@ -304,10 +304,13 @@ for i in range(num_group):
 Group_sub = spmatrix(1.0, G_sparse_list, range(num_asset))
 
 exp_sub = matrix(np.array(covs.T))
+G = matrix(sparse([G, asset_sub, -asset_sub]))
+#G = matrix(sparse([G, asset_sub, -asset_sub, Group_sub, -Group_sub]))
 #G = matrix(sparse([G, asset_sub, -asset_sub, Group_sub, -Group_sub, exp_sub, -exp_sub]))
-G = matrix(sparse([G, asset_sub, -asset_sub, Group_sub, -Group_sub]))
+#G = matrix(sparse([G, exp_sub, -exp_sub]))
 
-b_asset = [(0.0, 1.)] * rets.shape[1]
+
+b_asset = [(0.0, .5)] * rets.shape[1]
 b_group = [(0.0, 1.0)] * num_group
 
 b_asset_upper_bound = np.array([x[-1] for x in b_asset])
@@ -318,22 +321,189 @@ b_group_upper_bound = np.array([x[-1] for x in b_group])
 b_group_lower_bound = np.array([x[0] for x in b_group])
 b_group_matrix = matrix(np.concatenate((b_group_upper_bound,
                                         -b_group_lower_bound), 0))
-b_factor_exposure = list(zip((np.array(covs*(1.0/noa))).sum(axis=1)*0.99, (np.array(covs*(1.0/noa))).sum(axis=1)*1.01))
+b_factor_exposure = list(zip((np.array(covs*(1.0/noa))).min(axis=1)*0.9999, (np.array(covs*(1.0/noa))).max(axis=1)*1.0001))
 b_factor_exposure_upper_bound = np.array([x[-1] for x in b_factor_exposure])
 b_factor_exposure_lower_bound = np.array([x[0] for x in b_factor_exposure])
 b_factor_exposure_matrix = matrix(np.concatenate(
     (b_factor_exposure_upper_bound, -b_factor_exposure_lower_bound), 0))
 
+#h = matrix(sparse([h, b_asset_matrix]))
+#h = matrix(sparse([h, b_asset_matrix, b_group_matrix]))
 #h = matrix(sparse([h, b_asset_matrix, b_group_matrix, b_factor_exposure_matrix]))
-h = matrix(sparse([h, b_asset_matrix, b_group_matrix]))
+#h = matrix(sparse([h, b_factor_exposure_matrix]))
 
-sol = solvers.qp(P, q, G, h, A, b)
 
+#sol = solvers.qp(P, q, G, h, A, b)
+G = matrix(-np.transpose((rets.mean())), (1, n))
+h = matrix(-np.ones((1, 1))*target_return)
 # print('G', G)
 # print('h', h)
-if sol['status'] == 'optimal':
-    print('result is optimal')
-    print(sol['x'])
-elif sol['status'] == 'unknown':
-    print('the algorithm failed to find a solution that satisfies the specified tolerances')
+# if sol['status'] == 'optimal':
+#     print('result is optimal')
+#     print(sol['x'])
+# elif sol['status'] == 'unknown':
+#     print('the algorithm failed to find a solution that satisfies the specified tolerances')
 
+
+class State:
+    def run(self):
+        assert 0, "run not implemented"
+
+    def next(self, input):
+        assert 0, "next not implemented"
+
+
+class StateMachine:
+    def __init__(self, initialState):
+        self.currentState = initialState
+        self.currentState.run()
+    # Template method:
+
+    def runAll(self, inputs):
+        for i in inputs:
+            print(i)
+            self.currentState = self.currentState.next(i)
+            self.currentState.run()
+
+
+class MouseAction:
+    def __init__(self, action):
+        self.action = action
+
+    def __str__(self): return self.action
+
+    def __cmp__(self, other):
+        return (self.action > other.action) - (self.action < other.action)
+
+    # Necessary when __cmp__ or __eq__ is defined
+    # in order to make this class usable as a
+    # dictionary key:
+
+    def __hash__(self):
+        return hash(self.action)
+
+
+class TestAsset(State):
+    def run(self):
+        G1 = matrix(sparse([G, asset_sub, -asset_sub]))
+        h1 = matrix(sparse([h, b_asset_matrix]))
+        sol = solvers.qp(P, q, G1, h1, A, b)
+        if sol['x'] == 'optimal':
+            print('Asset is OK')
+            return MouseTrap.test_group
+        else:
+            print('failure because of asset constraint')
+
+    def next(self, input):
+        if input == MouseAction.test_group:
+            return MouseTrap.test_group
+        #return MouseTrap.waiting
+
+
+class TestGroup(State):
+    def run(self):
+        G2 = matrix(sparse([G, Group_sub, -Group_sub]))
+        h2 = matrix(sparse([h, b_group_matrix]))
+
+        sol = solvers.qp(P, q, G2, h2, A, b)
+        if sol['x'] == 'optimal':
+            print('group is OK')
+            return MouseTrap.test_exposure
+        else:
+            print('failure because of group constraint')
+
+    def next(self, input):
+        if input == MouseAction.test_exposure:
+            return MouseTrap.test_exposure
+
+
+class TestExposure(State):
+    def run(self):
+        G3 = matrix(sparse([G, exp_sub, -exp_sub]))
+        h3 = matrix(sparse([h, b_factor_exposure_matrix]))
+
+        sol = solvers.qp(P, q, G3, h3, A, b)
+        if sol['x'] == 'optimal':
+            print('exposure is OK')
+            return MouseTrap.test_asset_group
+        else:
+            print('failure because of exposure constraint')
+
+    def next(self, input):
+        if input == MouseAction.test_asset_group:
+            return MouseTrap.test_asset_group
+
+class TestAssetGroup(State):
+    def run(self):
+        print("Holding: Mouse caught")
+
+    def next(self, input):
+        if input == MouseAction.removed:
+            return MouseTrap.waiting
+        return MouseTrap.holding
+
+
+class TestAssetExposure(State):
+    def run(self):
+        print("Holding: Mouse caught")
+
+    def next(self, input):
+        if input == MouseAction.removed:
+            return MouseTrap.waiting
+        return MouseTrap.holding
+
+
+class TestGroupExposure(State):
+    def run(self):
+        print("Holding: Mouse caught")
+
+    def next(self, input):
+        if input == MouseAction.removed:
+            return MouseTrap.waiting
+        return MouseTrap.holding
+
+
+class TestAssetGroupExposure(State):
+    def run(self):
+        print("Holding: Mouse caught")
+
+    def next(self, input):
+        if input == MouseAction.removed:
+            return MouseTrap.waiting
+        return MouseTrap.holding
+
+
+class MouseTrap(StateMachine):
+    def __init__(self):
+        # Initial state
+        StateMachine.__init__(self, MouseTrap.test_asset)
+
+
+MouseAction.test_asset = MouseAction("test asset")
+MouseAction.test_group = MouseAction("test group")
+MouseAction.test_exposure = MouseAction("test exposure")
+
+MouseAction.test_asset_group = MouseAction("test asset group")
+MouseAction.test_asset_exposure = MouseAction("test asset exposure")
+MouseAction.test_group_exposure = MouseAction("test group exposure")
+
+MouseAction.test_asset_group_exposure = MouseAction("test asset group exposure")
+
+MouseTrap.test_asset = TestAsset()
+MouseTrap.test_group = TestGroup()
+MouseTrap.test_exposure = TestExposure()
+MouseTrap.test_asset_group = TestAssetGroup()
+MouseTrap.test_asset_exposure = TestAssetExposure()
+MouseTrap.test_group_exposure = TestGroupExposure()
+MouseTrap.test_asset_group_exposure = TestAssetGroupExposure()
+
+
+moves = ['test asset',
+         'test group',
+         'test exposure',
+         'test asset group',
+         'test asset exposure',
+         'test group exposure',
+         'test asset group exposure']
+
+MouseTrap().runAll(map(MouseAction, moves))
