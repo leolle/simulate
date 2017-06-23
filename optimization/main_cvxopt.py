@@ -53,6 +53,54 @@ avg_ret = matrix(rets_mean.values)
 n = len(symbols)
 
 
+def check_boundary_constraint(asset_lower_bound, asset_upper_bound,
+                              group_lower_bound, group_upper_bound):
+    ''' check input boundary limit.
+
+    Parameters
+    ----------
+    asset_lower_bound : array-like
+        Input lower boundary array for each asset.
+
+    asset_upper_bound : array-like
+        Input upper boundary array for each asset.
+
+    group_lower_bound : array-like
+        Input lower boundary array for each group.
+
+    group_upper_bound : array-like
+        Input upper boundary array for each group.
+
+    Returns
+    -------
+    True: all boundaries in condition.
+    False: any boundaries out of condition.
+    '''
+    if ((asset_lower_bound) < 0).any():
+        raise ValueError('short is not supported.')
+    if ((asset_upper_bound) > 1).any():
+        raise ValueError('asset upper boundary is bigger than 1.')
+    if (np.sum(asset_lower_bound) > 1):
+        raise ValueError('asset lower boundary sum is bigger than 1.')
+    if (np.sum(asset_upper_bound) < 1):
+        raise ValueError('asset upper boundary sum is smaller than 1.')
+    if ((asset_lower_bound > asset_upper_bound).any()):
+        raise ValueError('asset lower boundary is bigger than upper boundary')
+
+    if ((group_lower_bound) < 0).any():
+        raise ValueError('short is not supported.')
+    if ((group_upper_bound) > 1).any():
+        raise ValueError('group upper boundary is bigger than 1.')
+    if (np.sum(group_lower_bound) > 1):
+        raise ValueError('group lower boundary sum is bigger than 1.')
+    if (np.sum(group_upper_bound) < 1):
+        raise ValueError('group upper boundary sum is smaller than 1.')
+    if ((group_lower_bound > group_upper_bound).any()):
+        raise ValueError('group lower boundary is bigger than upper boundary')
+
+    return True
+
+
 def statistics(weights):
     ''' Return portfolio statistics.
 
@@ -98,13 +146,16 @@ def minimum_risk_subject_to_target_return():
 
     groups = rets.groupby(axis=1, level=0, sort=False, group_keys=False).count().ix[-1].values
     num_group = len(groups)
-    num_asset = numpy.sum(groups)
+    num_asset = np.sum(groups)
     G_sparse_list = []
     for i in range(num_group):
         for j in range(groups[i]):
             G_sparse_list.append(i)
     Group_sub = spmatrix(1.0, G_sparse_list, range(num_asset))
     asset_sub = matrix(np.eye(n))
+
+    # asset_sub is for asset weight limit, Group sub is for group weight
+    # constraint.
     G = matrix(sparse([G, asset_sub, -asset_sub, Group_sub, -Group_sub]))
 
     b_asset = tuple((0.01, 1.0) for i in rets.columns)
@@ -134,7 +185,7 @@ def maximum_return_subject_to_target_risk():
     P = covs
     q = avg_ret
     G = matrix(-np.eye(n))
-    h = matrix(-numpy.zeros((n, 1)))
+    h = matrix(-np.zeros((n, 1)))
 
     # equality constraint Ax = b; captures the constraint sum(x) == 1
     A = matrix(1.0, (1, n))
@@ -217,9 +268,9 @@ h = matrix(-numpy.zeros((n, 1)))
 A = matrix(1.0, (1, n))
 b = matrix(1.0)
 
-xs = [solvers.qp(mu*covs, q, G, h, A, b)['x'] for mu in mus]
-returns = [dot(avg_ret.T, x) for x in xs]
-risks = [np.sqrt(dot(x, covs*x)) for x in xs]
+xs = [solvers.qp(mu*covs, q, G, h, A, b) for mu in mus]
+returns = [dot(avg_ret.T, x['x']) for x in xs]
+risks = [np.sqrt(dot(x['x'], covs*x['x'])) for x in xs]
 try: import pylab
 except ImportError: pass
 else:
@@ -231,3 +282,37 @@ else:
     pylab.title('Risk-return trade-off curve')
     pylab.yticks([0.00, 0.05, 0.10, 0.15])
    # pylab.show()
+
+
+groups = market_to_market_price.groupby(axis=1, level=0, sort=False,
+                                        group_keys=False).\
+                                        count().iloc[-1,:].values
+num_group = len(groups)
+num_asset = np.sum(groups)
+position_limit = 3
+
+arr = np.array([1] * position_limit + [0] * (n-position_limit))
+np.random.shuffle(arr)
+asset_sub = matrix(np.diag(arr))
+
+target_return = -0.000996
+G = matrix(-np.transpose(np.array(rets)))
+h = matrix(-np.ones((1, 1))*target_return)
+G_sparse_list = []
+for i in range(num_group):
+	for j in range(groups[i]):
+		G_sparse_list.append(i)
+Group_sub = spmatrix(arr, G_sparse_list, range(num_asset))
+#position_limit = 500
+#position_limit = n
+#arr = np.array([1] * position_limit + [0] * (n-position_limit))
+#np.random.shuffle(arr)
+#asset_sub = matrix(np.diag(arr))
+#asset_sub = matrix(np.eye(n))
+#exp_sub = matrix(np.array(big_X.T*arr))
+exp_sub = matrix(np.array(covs.T*arr))
+G = matrix(sparse([G, asset_sub, -asset_sub, Group_sub, -Group_sub, exp_sub, -exp_sub]))
+#G = matrix(sparse([G, asset_sub, -asset_sub, Group_sub, -Group_sub]))
+print('arr', arr)
+print('G', G)
+print('h', h)

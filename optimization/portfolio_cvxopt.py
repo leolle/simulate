@@ -7,8 +7,8 @@ import scipy.optimize as sco
 from lib.gftTools import gftIO
 
 # fetch data
+path = '~/projects/simulate/data/optimization/'
 path = '~/share/optimize/'
-
 target_mode = gftIO.zload(path + 'x0.pkl')
 position_limit = gftIO.zload(path + 'x1.pkl')
 covariance_matrix = gftIO.zload(path + 'x2.pkl')
@@ -186,20 +186,20 @@ def portfolio_optimization(target_mode, df_position_limit, risk_model,
     def calculate_total_risk(weights, cov_matrix):
         port_var = np.dot(np.dot(weights.T, cov_matrix), weights)
         return port_var
-    
-    
+
+
     def max_func_return(weights):
         return -np.sum(asset_return.ix[:target_date].mean().fillna(0) * weights)
-    
-    
+
+
     def minimum_variance(weights):
         return calculate_total_risk(weights, cov_matrix_V)
-    
-    
+
+
     def min_func_vol(weights):
         return np.sqrt(np.dot(weights.T, np.dot(
             asset_return.ix[:target_date].cov(), weights)))
-    
+
 
     optimizer = {
         0: {'fitness': minimum_variance,
