@@ -162,9 +162,14 @@ def CVXOptimizer(context, target_mode, position_limit, risk_model,
     target_return = -0.00096377
     target_risk = 3.16026352e-06
     target_mode = 1
+    position_limit = 500
+
+    # find the nearest date next to target date from specific risk
     dt_next_to_target = specific_risk.index.searchsorted(target_date)
     dt_next_to_target = specific_risk.index[dt_next_to_target]
     target_specific_risk = specific_risk.loc[dt_next_to_target, :]
+
+    # drop duplicated rows at date
     df_industries_asset_weight = asset_weights.drop_duplicates(
         subset=['date', 'symbol'])
     try:
@@ -173,10 +178,15 @@ def CVXOptimizer(context, target_mode, position_limit, risk_model,
     except KeyError:
         raise KeyError('invalid input date: %s' % target_date)
 
+    # drop incomplete rows
     df_industries_asset_init_weight = df_industries_asset_init_weight.dropna(
         axis=0, subset=['industry', 'symbol'], how='any')
 
     # find intersection symbol between risk model and initial weight
+    try:
+        df_industries_asset_init_weight = df_industries_asset_init_weight.sample(position_limit)
+    except ValueError:
+        print("position limit is bigger than total symbols")
     unique_symbol = df_industries_asset_init_weight['symbol'].unique()
     target_symbols = target_specific_risk.index.intersection(unique_symbol)
     df_industries_asset_target_init_weight = df_industries_asset_init_weight.\
@@ -228,25 +238,25 @@ def CVXOptimizer(context, target_mode, position_limit, risk_model,
     b_asset = tuple((0.0, 1.0) for i in asset_return.columns)
     b_group = [(0.0, 1)] * num_group
 
-    position_limit = noa
-    arr = np.array([1] * position_limit + [0] * (noa-position_limit))
-    np.random.shuffle(arr)
+    #position_limit = noa
+    #arr = np.array([1] * position_limit + [0] * (noa-position_limit))
+    #np.random.shuffle(arr)
 
     rets_mean = logrels(asset_return).mean()
     avg_ret = matrix(rets_mean.values)
-    G = matrix(-np.transpose(np.array(avg_ret)*arr.reshape((noa, 1))))
+    G = matrix(-np.transpose(np.array(avg_ret)))
     # G = matrix(-np.transpose(np.array(avg_ret)))
     h = matrix(-np.ones((1, 1))*target_return)
     G_sparse_list = []
     for i in range(num_group):
         for j in range(groups[i]):
             G_sparse_list.append(i)
-    Group_sub = spmatrix(arr, G_sparse_list, range(num_asset))
+    Group_sub = spmatrix(1.0, G_sparse_list, range(num_asset))
 
-    asset_sub = matrix(np.diag(arr))
+    asset_sub = matrix(np.eye(noa))
     # asset_sub = matrix(np.eye(n))
     # exp_sub = matrix(np.array(big_X.T))
-    exp_sub = matrix(np.array(big_X.T*arr))
+    exp_sub = matrix(np.array(big_X.T))
 
     G = matrix(sparse([G, asset_sub, -asset_sub, Group_sub, -Group_sub,
                        exp_sub, -exp_sub]))
