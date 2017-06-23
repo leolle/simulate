@@ -256,61 +256,84 @@ def minimum_risk():
 #maximum_return()
 #minimum_risk()
 #maximum_return_subject_to_target_risk()
-N = 100
-mus = [10**(5.0*t/N-1.0) for t in range(N)]
+# N = 100
+# mus = [10**(5.0*t/N-1.0) for t in range(N)]
 
-P = covs
-q = -avg_ret
-G = matrix(-np.eye(n))
-h = matrix(-numpy.zeros((n, 1)))
+# P = covs
+# q = -avg_ret
+# G = matrix(-np.eye(n))
+# h = matrix(-numpy.zeros((n, 1)))
 
-# equality constraint Ax = b; captures the constraint sum(x) == 1
+# # equality constraint Ax = b; captures the constraint sum(x) == 1
 A = matrix(1.0, (1, n))
 b = matrix(1.0)
 
-xs = [solvers.qp(mu*covs, q, G, h, A, b) for mu in mus]
-returns = [dot(avg_ret.T, x['x']) for x in xs]
-risks = [np.sqrt(dot(x['x'], covs*x['x'])) for x in xs]
-try: import pylab
-except ImportError: pass
-else:
-    pylab.figure(1, facecolor='w')
-    pylab.plot(risks, returns)
-    pylab.xlabel('standard deviation')
-    pylab.ylabel('expected return')
-    pylab.axis([0, 0.2, 0, 0.15])
-    pylab.title('Risk-return trade-off curve')
-    pylab.yticks([0.00, 0.05, 0.10, 0.15])
-   # pylab.show()
+# xs = [solvers.qp(mu*covs, q, G, h, A, b) for mu in mus]
+# returns = [dot(avg_ret.T, x['x']) for x in xs]
+# risks = [np.sqrt(dot(x['x'], covs*x['x'])) for x in xs]
+# try: import pylab
+# except ImportError: pass
+# else:
+#     pylab.figure(1, facecolor='w')
+#     pylab.plot(risks, returns)
+#     pylab.xlabel('standard deviation')
+#     pylab.ylabel('expected return')
+#     pylab.axis([0, 0.2, 0, 0.15])
+#     pylab.title('Risk-return trade-off curve')
+#     pylab.yticks([0.00, 0.05, 0.10, 0.15])
+#    # pylab.show()
 
+P = covs
+q = matrix(numpy.zeros((n, 1)), tc='d')
 
 groups = market_to_market_price.groupby(axis=1, level=0, sort=False,
                                         group_keys=False).\
                                         count().iloc[-1,:].values
 num_group = len(groups)
 num_asset = np.sum(groups)
-position_limit = 3
 
 asset_sub = matrix(np.eye(n))
 
-target_return = -0.000996
-G = matrix(-np.transpose(np.array(rets)))
+target_return = 0.010049062049062037
+G = matrix(-np.transpose((rets.mean())), (1, n))
 h = matrix(-np.ones((1, 1))*target_return)
 G_sparse_list = []
 for i in range(num_group):
 	for j in range(groups[i]):
 		G_sparse_list.append(i)
-Group_sub = spmatrix(1., G_sparse_list, range(num_asset))
-#position_limit = 500
-#position_limit = n
-#arr = np.array([1] * position_limit + [0] * (n-position_limit))
-#np.random.shuffle(arr)
-#asset_sub = matrix(np.diag(arr))
-#asset_sub = matrix(np.eye(n))
-#exp_sub = matrix(np.array(big_X.T*arr))
+Group_sub = spmatrix(1.0, G_sparse_list, range(num_asset))
+
 exp_sub = matrix(np.array(covs.T))
 #G = matrix(sparse([G, asset_sub, -asset_sub, Group_sub, -Group_sub, exp_sub, -exp_sub]))
-G = matrix(sparse([G, asset_sub, -asset_sub, Group_sub, -Group_sub, matrix([])]))
+G = matrix(sparse([G, asset_sub, -asset_sub, Group_sub, -Group_sub]))
 
-print('G', G)
-print('h', h)
+b_asset = [(0.0, 1.)] * rets.shape[1]
+b_group = [(0.0, 1.0)] * num_group
+
+b_asset_upper_bound = np.array([x[-1] for x in b_asset])
+b_asset_lower_bound = np.array([x[0] for x in b_asset])
+b_asset_matrix = matrix(np.concatenate((b_asset_upper_bound,
+                                        -b_asset_lower_bound), 0))
+b_group_upper_bound = np.array([x[-1] for x in b_group])
+b_group_lower_bound = np.array([x[0] for x in b_group])
+b_group_matrix = matrix(np.concatenate((b_group_upper_bound,
+                                        -b_group_lower_bound), 0))
+b_factor_exposure = list(zip((np.array(covs*(1.0/noa))).sum(axis=1)*0.99, (np.array(covs*(1.0/noa))).sum(axis=1)*1.01))
+b_factor_exposure_upper_bound = np.array([x[-1] for x in b_factor_exposure])
+b_factor_exposure_lower_bound = np.array([x[0] for x in b_factor_exposure])
+b_factor_exposure_matrix = matrix(np.concatenate(
+    (b_factor_exposure_upper_bound, -b_factor_exposure_lower_bound), 0))
+
+#h = matrix(sparse([h, b_asset_matrix, b_group_matrix, b_factor_exposure_matrix]))
+h = matrix(sparse([h, b_asset_matrix, b_group_matrix]))
+
+sol = solvers.qp(P, q, G, h, A, b)
+
+# print('G', G)
+# print('h', h)
+if sol['status'] == 'optimal':
+    print('result is optimal')
+    print(sol['x'])
+elif sol['status'] == 'unknown':
+    print('the algorithm failed to find a solution that satisfies the specified tolerances')
+
