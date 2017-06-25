@@ -383,102 +383,122 @@ class MouseAction:
         return hash(self.action)
 
 
-class TestAsset(State):
+class Waiting(State):
     def run(self):
-        G1 = matrix(sparse([G, asset_sub, -asset_sub]))
-        h1 = matrix(sparse([h, b_asset_matrix]))
-        sol = solvers.qp(P, q, G1, h1, A, b)
-        if sol['x'] == 'optimal':
-            print('Asset is OK')
-            return MouseTrap.test_group
-        else:
-            print('failure because of asset constraint')
+        print("Waiting: Waiting for test!!")
 
     def next(self, input):
-        if input == MouseAction.test_group:
+        if input == MouseAction.test_asset:
+            print("asset!!\n")
+            return MouseTrap.test_asset
+        return MouseTrap.waiting
+
+
+class TestAsset(State):
+    def run(self):
+        print("test asset!!")
+        G1 = matrix(sparse([G, asset_sub, -asset_sub]))
+        h1 = matrix(sparse([h, b_asset_matrix]))
+
+        sol = solvers.qp(P, q, G1, h1, A, b)
+        if sol['x'] == 'optimal':
+            print('asset is OK')
+            return MouseTrap.test_succeed
+        else:
+            return MouseTrap.test_failed
+            print('failure because of group constraint')
+
+    def next(self, input):
+        print('sm')
+        if input == MouseAction.test_failed:
+            return MouseTrap.test_waiting
+        else:
             return MouseTrap.test_group
-        #return MouseTrap.waiting
+        return MouseTrap.test_asset
 
 
 class TestGroup(State):
     def run(self):
-        G2 = matrix(sparse([G, Group_sub, -Group_sub]))
-        h2 = matrix(sparse([h, b_group_matrix]))
+        print("test group!!")
+        # G2 = matrix(sparse([G, Group_sub, -Group_sub]))
+        # h2 = matrix(sparse([h, b_group_matrix]))
 
-        sol = solvers.qp(P, q, G2, h2, A, b)
-        if sol['x'] == 'optimal':
-            print('group is OK')
-            return MouseTrap.test_exposure
-        else:
-            print('failure because of group constraint')
+        # sol = solvers.qp(P, q, G2, h2, A, b)
+        # if sol['x'] == 'optimal':
+        #     print('group is OK')
+        #     return MouseTrap.test_group
+        # else:
+        #     print('failure because of group constraint')
 
     def next(self, input):
         if input == MouseAction.test_exposure:
             return MouseTrap.test_exposure
 
 
-class TestExposure(State):
-    def run(self):
-        G3 = matrix(sparse([G, exp_sub, -exp_sub]))
-        h3 = matrix(sparse([h, b_factor_exposure_matrix]))
+# class TestExposure(State):
+#     def run(self):
+#         G3 = matrix(sparse([G, exp_sub, -exp_sub]))
+#         h3 = matrix(sparse([h, b_factor_exposure_matrix]))
 
-        sol = solvers.qp(P, q, G3, h3, A, b)
-        if sol['x'] == 'optimal':
-            print('exposure is OK')
-            return MouseTrap.test_asset_group
-        else:
-            print('failure because of exposure constraint')
+#         sol = solvers.qp(P, q, G3, h3, A, b)
+#         if sol['x'] == 'optimal':
+#             print('exposure is OK')
+#             return MouseTrap.test_asset_group
+#         else:
+#             print('failure because of exposure constraint')
 
-    def next(self, input):
-        if input == MouseAction.test_asset_group:
-            return MouseTrap.test_asset_group
+#     def next(self, input):
+#         if input == MouseAction.test_asset_group:
+#             return MouseTrap.test_asset_group
 
-class TestAssetGroup(State):
-    def run(self):
-        print("Holding: Mouse caught")
+# class TestAssetGroup(State):
+#     def run(self):
+#         print("Holding: Mouse caught")
 
-    def next(self, input):
-        if input == MouseAction.removed:
-            return MouseTrap.waiting
-        return MouseTrap.holding
-
-
-class TestAssetExposure(State):
-    def run(self):
-        print("Holding: Mouse caught")
-
-    def next(self, input):
-        if input == MouseAction.removed:
-            return MouseTrap.waiting
-        return MouseTrap.holding
+#     def next(self, input):
+#         if input == MouseAction.removed:
+#             return MouseTrap.waiting
+#         return MouseTrap.holding
 
 
-class TestGroupExposure(State):
-    def run(self):
-        print("Holding: Mouse caught")
+# class TestAssetExposure(State):
+#     def run(self):
+#         print("Holding: Mouse caught")
 
-    def next(self, input):
-        if input == MouseAction.removed:
-            return MouseTrap.waiting
-        return MouseTrap.holding
+#     def next(self, input):
+#         if input == MouseAction.removed:
+#             return MouseTrap.waiting
+#         return MouseTrap.holding
 
 
-class TestAssetGroupExposure(State):
-    def run(self):
-        print("Holding: Mouse caught")
+# class TestGroupExposure(State):
+#     def run(self):
+#         print("Holding: Mouse caught")
 
-    def next(self, input):
-        if input == MouseAction.removed:
-            return MouseTrap.waiting
-        return MouseTrap.holding
+#     def next(self, input):
+#         if input == MouseAction.removed:
+#             return MouseTrap.waiting
+#         return MouseTrap.holding
+
+
+# class TestAssetGroupExposure(State):
+#     def run(self):
+#         print("Holding: Mouse caught")
+
+#     def next(self, input):
+#         if input == MouseAction.removed:
+#             return MouseTrap.waiting
+#         return MouseTrap.holding
 
 
 class MouseTrap(StateMachine):
     def __init__(self):
         # Initial state
-        StateMachine.__init__(self, MouseTrap.test_asset)
+        StateMachine.__init__(self, MouseTrap.waiting)
 
 
+MouseAction.test_failed = MouseAction("test failed")
+MouseAction.test_success = MouseAction("test succeed")
 MouseAction.test_asset = MouseAction("test asset")
 MouseAction.test_group = MouseAction("test group")
 MouseAction.test_exposure = MouseAction("test exposure")
@@ -488,22 +508,24 @@ MouseAction.test_asset_exposure = MouseAction("test asset exposure")
 MouseAction.test_group_exposure = MouseAction("test group exposure")
 
 MouseAction.test_asset_group_exposure = MouseAction("test asset group exposure")
+MouseAction.test_complete = MouseAction("test complete")
 
+MouseTrap.waiting = Waiting()
 MouseTrap.test_asset = TestAsset()
 MouseTrap.test_group = TestGroup()
-MouseTrap.test_exposure = TestExposure()
-MouseTrap.test_asset_group = TestAssetGroup()
-MouseTrap.test_asset_exposure = TestAssetExposure()
-MouseTrap.test_group_exposure = TestGroupExposure()
-MouseTrap.test_asset_group_exposure = TestAssetGroupExposure()
+# MouseTrap.test_exposure = TestExposure()
+# MouseTrap.test_asset_group = TestAssetGroup()
+# MouseTrap.test_asset_exposure = TestAssetExposure()
+# MouseTrap.test_group_exposure = TestGroupExposure()
+# MouseTrap.test_asset_group_exposure = TestAssetGroupExposure()
 
 
-moves = ['test asset',
-         'test group',
-         'test exposure',
-         'test asset group',
-         'test asset exposure',
-         'test group exposure',
-         'test asset group exposure']
+moves = ['test asset'
+         'test group',]
+         # 'test exposure',
+         # 'test asset group',
+         # 'test asset exposure',
+         # 'test group exposure',
+         # 'test asset group exposure']
 
 MouseTrap().runAll(map(MouseAction, moves))
