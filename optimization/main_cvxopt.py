@@ -56,7 +56,8 @@ n = len(symbols)
 
 
 def check_boundary_constraint(asset_lower_bound, asset_upper_bound,
-                              group_lower_bound, group_upper_bound):
+                              group_lower_bound, group_upper_bound,
+                              exposure_bound):
     ''' check input boundary limit.
 
     Parameters
@@ -346,14 +347,23 @@ class ConstraintError(Exception):
     pass
 
 
-boundary_sub = [asset_sub, Group_sub, exp_sub]
-limit = [b_asset_matrix, b_group_matrix, b_factor_exposure_matrix]
-error = ('asset ', 'group ', 'exposure ')
-stuff = [1, 2, 3]
+# G_pos = matrix(sparse([G, matrix(-np.eye(n), tc='d')]))
+# h_pos = matrix(sparse([h, matrix(0.0, (n, 1))]))
+
+G = matrix(sparse([G, asset_sub]))
+h = matrix(sparse([h, b_asset_matrix]))
+
+
+boundary_sub = [Group_sub, exp_sub]
+limit = [b_group_matrix, b_factor_exposure_matrix]
+error = ('group ', 'exposure ')
+stuff = [1, 2]
 for L in range(0, len(stuff)+1):
     for subset in itertools.combinations(stuff, L):
         if len(subset) == 0:
             try:
+                # G_pos = matrix(sparse([G, matrix(-np.eye(n), tc='d')]))
+                # h_pos = matrix(sparse([h, matrix(np.zeros((n, 1)))]))
                 sol = solvers.qp(P, q, G, h, A, b)
                 if sol['x'] == 'unknown':
                     print('failed to get optimal value on position limit constraint')
@@ -379,6 +389,8 @@ for L in range(0, len(stuff)+1):
                     print('failed to get optimal value on %s', [error[i] for i in ls])
             except ValueError as e:
                 raise ConstraintError('ERROR on solving combination %s, %s' % ([error[i] for i in ls], e))
-if sol['x'] == 'optimal':
+if sol['status'] == 'optimal':
     print(sol['x'])
+else:
+    print(sol['status'])
 
