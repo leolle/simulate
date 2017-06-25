@@ -23,4 +23,5 @@ default None Value
 ** find the reason of why optimal result can't be reached.
 ** find the consuming time.
 ** factor exposure limit boundary.
+default value from min and max of each factor.
 ** sharpe portfolio.
