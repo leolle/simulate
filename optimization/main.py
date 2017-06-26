@@ -163,7 +163,7 @@ def find_nearest(array, value):
 def CVXOptimizer(context, target_mode, position_limit, risk_model,
                  asset_return, asset_weight, target_risk,
                  target_return, target_date, asset_constraint,
-                 group_constraint, exposure_constaint):
+                 group_constraint, exposure_constraint):
     """
     optimize fund weight target on different constraints, objective, based on
     target type and mode, fund return target, fund weight, group weight， etc.
@@ -211,6 +211,12 @@ def CVXOptimizer(context, target_mode, position_limit, risk_model,
     asset_return = asset_return.asMatrix()
     asset_weights = asset_weight.asColumnTab()
     target_date = pd.to_datetime(target_date)
+    if len(asset_constraint > 0):
+        asset_constraint = asset_constraint.asMatrix()
+    if len(group_constraint > 0):
+        group_constraint = group_constraint.asMatrix()
+    if len(exposure_constraint > 0):
+        exposure_constaint = exposure_constraint.asMatrix()
 
     # regex to search all the factors
     ls_factor = [x[:-4] for x in risk_model.keys() if re.search(".ret$", x)]
@@ -218,11 +224,11 @@ def CVXOptimizer(context, target_mode, position_limit, risk_model,
 
     specific_risk = risk_model['specificRisk'].pivot(
         index='date', columns='symbol', values='specificrisk')
-    target_date = pd.datetime(year=2016, month=10, day=31)
-    target_return = -0.00096377
-    target_risk = 3.16026352e-06
-    target_mode = 1
-    position_limit = 500
+    # target_date = pd.datetime(year=2016, month=10, day=31)
+    # target_return = -0.00096377
+    # target_risk = 3.16026352e-06
+    #target_mode = 1
+    #position_limit = 500
 
     # find the nearest date next to target date from specific risk
     dt_next_to_target = specific_risk.index.searchsorted(target_date)
@@ -242,17 +248,13 @@ def CVXOptimizer(context, target_mode, position_limit, risk_model,
     df_industries_asset_init_weight = df_industries_asset_init_weight.dropna(
         axis=0, subset=['industry', 'symbol'], how='any')
 
-    # find intersection symbol between risk model and initial weight
-    # try:
-    #     df_industries_asset_init_weight = df_industries_asset_init_weight.sample(position_limit)
-    # except ValueError:
-    #     print("position limit is bigger than total symbols")
     unique_symbol = df_industries_asset_init_weight['symbol'].unique()
     target_symbols = target_specific_risk.index.intersection(unique_symbol)
     if position_limit > len(target_symbols):
         print("position limit is bigger than total symbols")
         position_limit = len(target_symbols)
 
+    # get random symbols at the target position limit
     arr = list(range(len(target_symbols)))
     np.random.shuffle(arr)
     target_symbols = target_symbols[arr[:position_limit]]
@@ -263,21 +265,22 @@ def CVXOptimizer(context, target_mode, position_limit, risk_model,
         df_industries_asset_target_init_weight, values='value', index=['date'],
         columns=['industry', 'symbol'])
     df_pivot_industries_asset_weights = df_pivot_industries_asset_weights.fillna(0)
-    # idx = pd.IndexSlice
-
+    
     noa = len(target_symbols)
     if noa < 1:
-        print("no intersected symbols from specific risk and initial holding.")
+        raise ValueError("no intersected symbols from specific risk and initial holding.")
 
+    # get the ordered column list
+    idx_level_0_value = df_pivot_industries_asset_weights.columns.get_level_values(0)
     idx_level_1_value = df_pivot_industries_asset_weights.columns.get_level_values(1)
     asset_return = asset_return.loc[:target_date, idx_level_1_value].fillna(0)
 
-    diag = specific_risk.loc[dt_next_to_target, target_symbols]
+    diag = specific_risk.loc[dt_next_to_target, idx_level_1_value]
     delta = pd.DataFrame(np.diag(diag), index=diag.index,
                          columns=diag.index).fillna(0)
 
     big_X = get_factor_exposure(risk_model, ls_factor, target_date,
-                                target_symbols)
+                                idx_level_1_value)
     big_X = big_X.fillna(0)
     all_factors = big_X.columns
 
@@ -302,18 +305,45 @@ def CVXOptimizer(context, target_mode, position_limit, risk_model,
         iloc[-1, :].values
     num_group = len(groups)
     num_asset = np.sum(groups)
-    # target mode 1, b_asset and b_group are supposed to be a DataFrame
-    b_asset = tuple((0.0, 1.0) for i in asset_return.columns)
-    b_group = [(0.0, 1)] * num_group
 
-    #position_limit = noa
-    #arr = np.array([1] * position_limit + [0] * (noa-position_limit))
-    #np.random.shuffle(arr)
+
+    # set boundary vector for h
+    df_asset_weight = pd.DataFrame({'lower': [0.0], 'upper': [1.0]},
+                                   index=idx_level_1_value)
+    df_group_weight = pd.DataFrame({'lower': [0.0], 'upper': [1.0]},
+                                   index=set(idx_level_0_value))
+    df_factor_exposure_bound = pd.DataFrame(index=big_X.T.index, columns=[['lower', 'upper']])
+    df_factor_exposure_bound.lower = (1.0/noa)*big_X.sum()*(0.999991)
+    df_factor_exposure_bound.upper = (1.0/noa)*big_X.sum()*(1.000009)
+
+    if len(asset_constraint) > 0:
+        df_asset_weight.lower.ix[asset_constraint.lower] = asset_constraint.lower
+        df_asset_weight.upper.ix[asset_constraint.upper] = asset_constraint.upper
+    if len(group_constraint) > 0:
+        df_group_weight.lower.ix[group_constraint.lower] = group_constraint.lower
+        df_group_weight.upper.ix[group_constraint.upper] = group_constraint.upper
+    if len(exposure_constraint) > 0:
+        df_factor_exposure_bound.lower.ix[exposure_constraint.lower]\
+            = exposure_constraint.lower
+        df_factor_exposure_bound.upper.ix[exposure_constraint.upper]\
+            = exposure_constraint.upper
+
+    if check_boundary_constraint(df_asset_weight, df_group_weight,
+                                 df_factor_exposure_bound, big_X):
+        print("boundary setting is fine")
+
+    df_asset_bnd_matrix = matrix(np.concatenate(((df_asset_weight.upper,
+                                                  df_asset_weight.lower)), 0))
+    df_group_bnd_matrix = matrix(np.concatenate(((df_group_weight.upper,
+                                                  df_group_weight.lower)), 0))
+
+    if check_boundary_constraint(df_asset_weight, df_group_weight,
+                                 df_factor_exposure_bound, big_X):
+        print("constraint setting is OK")
 
     rets_mean = logrels(asset_return).mean()
     avg_ret = matrix(rets_mean.values)
     G = matrix(-np.transpose(np.array(avg_ret)))
-    # G = matrix(-np.transpose(np.array(avg_ret)))
     h = matrix(-np.ones((1, 1))*target_return)
     G_sparse_list = []
     for i in range(num_group):
@@ -321,30 +351,15 @@ def CVXOptimizer(context, target_mode, position_limit, risk_model,
             G_sparse_list.append(i)
     Group_sub = spmatrix(1.0, G_sparse_list, range(num_asset))
 
+    Group_sub = matrix(sparse([Group_sub, -Group_sub]))
+
     asset_sub = matrix(np.eye(noa))
-    # asset_sub = matrix(np.eye(n))
-    # exp_sub = matrix(np.array(big_X.T))
+    asset_sub = matrix(sparse([asset_sub, -asset_sub]))
     exp_sub = matrix(np.array(big_X.T))
+    exp_sub = matrix(sparse([exp_sub, - exp_sub]))
+    #G = matrix(sparse([G, asset_sub]))
 
-    G = matrix(sparse([G, asset_sub, -asset_sub, Group_sub, -Group_sub,
-                       exp_sub, -exp_sub]))
-
-    b_asset_upper_bound = np.array([x[-1] for x in b_asset])
-    b_asset_lower_bound = np.array([x[0] for x in b_asset])
-    b_asset_matrix = matrix(np.concatenate((b_asset_upper_bound,
-                                            -b_asset_lower_bound), 0))
-    b_group_upper_bound = np.array([x[-1] for x in b_group])
-    b_group_lower_bound = np.array([x[0] for x in b_group])
-    b_group_matrix = matrix(np.concatenate((b_group_upper_bound,
-                                            -b_group_lower_bound), 0))
-    b_factor_exposure = list(zip((big_X*(1.0/noa)).sum()*0.99, (big_X*(1.0/noa)).sum()*1.01))
-    b_factor_exposure_upper_bound = np.array([x[-1] for x in b_factor_exposure])
-    b_factor_exposure_lower_bound = np.array([x[0] for x in b_factor_exposure])
-    b_factor_exposure_matrix = matrix(np.concatenate(
-        (b_factor_exposure_upper_bound, -b_factor_exposure_lower_bound), 0))
-
-    h = matrix(sparse([h, b_asset_matrix, b_group_matrix,
-                       b_factor_exposure_matrix]))
+    h = matrix(sparse([h, b_asset_matrix, b_group_matrix, b_factor_exposure_matrix]))
 
     if target_mode == 0:
         G = matrix(-np.eye(noa), tc='d')
