@@ -30,6 +30,65 @@ def logrels(rets):
     return np.log(rets + 1)
 
 
+def check_boundary_constraint(df_asset_bound, df_group_bound,
+                              df_exposure_bound, df_exposure):
+    ''' check input boundary limit.
+
+    Parameters
+    ----------
+    df_asset_bound : dataframe-like
+        Input lower and upper boundary dataframe for each asset.
+
+    df_group_bound : dataframe-like
+        Input lower and upper boundary dataframe for each group.
+
+    df_exposure_bound : dataframe-like
+        Input lower and upper boundary dataframe for each factor.
+
+    df_exposure : dataframe
+        Big X.
+
+    Returns
+    -------
+    True: all boundaries in condition.
+    False: any boundaries out of condition.
+    '''
+    if ((df_asset_bound.lower) < 0).any():
+        raise ValueError('short is not supported.')
+    if ((df_asset_bound.upper) > 1).any():
+        raise ValueError('asset upper boundary is bigger than 1.')
+    if (np.sum(df_asset_bound.lower) > 1):
+        raise ValueError('asset lower boundary sum is bigger than 1.')
+    if (np.sum(df_asset_bound.upper) < 1):
+        raise ValueError('asset upper boundary sum is smaller than 1.')
+    if ((df_asset_bound.lower > df_asset_bound.upper).any()):
+        raise ValueError('asset lower boundary is bigger than upper boundary')
+
+    if ((df_group_bound.lower) < 0).any():
+        raise ValueError('short is not supported.')
+    if ((df_group_bound.upper) > 1).any():
+        raise ValueError('group upper boundary is bigger than 1.')
+    if (np.sum(df_group_bound.lower) > 1):
+        raise ValueError('group lower boundary sum is bigger than 1.')
+    if (np.sum(df_group_bound.upper) < 1):
+        raise ValueError('group upper boundary sum is smaller than 1.')
+    if ((df_group_bound.lower > df_group_bound.upper).any()):
+        raise ValueError('group lower boundary is bigger than upper boundary')
+
+    df_factor_exposure_bound_check = pd.DataFrame(index=df_exposure.T.index,
+                                                  columns=[['lower', 'upper']])
+    df_factor_exposure_bound_check.lower = df_exposure.T.min(axis=1)
+    df_factor_exposure_bound_check.upper = df_exposure.T.max(axis=1)
+
+    if (df_factor_exposure_bound_check.upper < df_exposure_bound.upper).any():
+        raise ValueError('factor exposure upper setting error')
+
+    if (df_factor_exposure_bound_check.lower > df_exposure_bound.lower).any():
+        raise ValueError('factor exposure lower setting error')
+
+    return True
+
+
 def statistics(weights, rets, covariance):
     """Compute expected portfolio statistics from individual asset returns.
 

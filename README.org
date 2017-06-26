@@ -20,8 +20,16 @@ add position limit will cause rank(A) < p
 CLOSED: [2017-06-23 Fri 14:46]
 ** add more constraint
 default None Value
-** find the reason of why optimal result can't be reached.
-** find the consuming time.
-** factor exposure limit boundary.
+** DONE find the reason of why optimal result can't be reached.
+CLOSED: [2017-06-25 Sun 20:35]
+** DONE find the function running time.
+CLOSED: [2017-06-26 Mon 09:50]
+CPU total: 26us.
+Wall time: 548us.
+** DONE factor exposure limit boundary.
+CLOSED: [2017-06-26 Mon 11:47]
+- create boundary dataframe, fill input dataframe na with 0 on lower bound, 1 on upper bound.
 default value from min and max of each factor.
 ** sharpe portfolio.
+** add loss function objective.
+** add transaction cost.

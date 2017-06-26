@@ -55,51 +55,61 @@ avg_ret = matrix(rets_mean.values)
 n = len(symbols)
 
 
-def check_boundary_constraint(asset_lower_bound, asset_upper_bound,
-                              group_lower_bound, group_upper_bound,
-                              exposure_bound):
+def check_boundary_constraint(df_asset_bound, df_group_bound,
+                              df_exposure_bound, df_exposure):
     ''' check input boundary limit.
 
     Parameters
     ----------
-    asset_lower_bound : array-like
-        Input lower boundary array for each asset.
+    df_asset_bound : dataframe-like
+        Input lower and upper boundary dataframe for each asset.
 
-    asset_upper_bound : array-like
-        Input upper boundary array for each asset.
+    df_group_bound : dataframe-like
+        Input lower and upper boundary dataframe for each group.
 
-    group_lower_bound : array-like
-        Input lower boundary array for each group.
+    df_exposure_bound : dataframe-like
+        Input lower and upper boundary dataframe for each factor.
 
-    group_upper_bound : array-like
-        Input upper boundary array for each group.
+    df_exposure : dataframe
+        Big X.
 
     Returns
     -------
     True: all boundaries in condition.
     False: any boundaries out of condition.
     '''
-    if ((asset_lower_bound) < 0).any():
+    if ((df_asset_bound.lower) < 0).any():
         raise ValueError('short is not supported.')
-    if ((asset_upper_bound) > 1).any():
+    if ((df_asset_bound.upper) > 1).any():
         raise ValueError('asset upper boundary is bigger than 1.')
-    if (np.sum(asset_lower_bound) > 1):
+    if (np.sum(df_asset_bound.lower) > 1):
         raise ValueError('asset lower boundary sum is bigger than 1.')
-    if (np.sum(asset_upper_bound) < 1):
+    if (np.sum(df_asset_bound.upper) < 1):
         raise ValueError('asset upper boundary sum is smaller than 1.')
-    if ((asset_lower_bound > asset_upper_bound).any()):
+    if ((df_asset_bound.lower > df_asset_bound.upper).any()):
         raise ValueError('asset lower boundary is bigger than upper boundary')
 
-    if ((group_lower_bound) < 0).any():
+    if ((df_group_bound.lower) < 0).any():
         raise ValueError('short is not supported.')
-    if ((group_upper_bound) > 1).any():
+    if ((df_group_bound.upper) > 1).any():
         raise ValueError('group upper boundary is bigger than 1.')
-    if (np.sum(group_lower_bound) > 1):
+    if (np.sum(df_group_bound.lower) > 1):
         raise ValueError('group lower boundary sum is bigger than 1.')
-    if (np.sum(group_upper_bound) < 1):
+    if (np.sum(df_group_bound.upper) < 1):
         raise ValueError('group upper boundary sum is smaller than 1.')
-    if ((group_lower_bound > group_upper_bound).any()):
+    if ((df_group_bound.lower > df_group_bound.upper).any()):
         raise ValueError('group lower boundary is bigger than upper boundary')
+
+    df_factor_exposure_bound_check = pd.DataFrame(index=df_exposure.T.index,
+                                                  columns=[['lower', 'upper']])
+    df_factor_exposure_bound_check.lower = df_exposure.T.min(axis=1)
+    df_factor_exposure_bound_check.upper = df_exposure.T.max(axis=1)
+
+    if (df_factor_exposure_bound_check.upper < df_exposure_bound.upper).any():
+        raise ValueError('factor exposure upper setting error')
+
+    if (df_factor_exposure_bound_check.lower > df_exposure_bound.lower).any():
+        raise ValueError('factor exposure lower setting error')
 
     return True
 
@@ -335,6 +345,21 @@ b_factor_exposure_matrix = matrix(np.concatenate(
 #h = matrix(sparse([h, b_asset_matrix, b_group_matrix]))
 #h = matrix(sparse([h, b_asset_matrix, b_group_matrix, b_factor_exposure_matrix]))
 #h = matrix(sparse([h, b_factor_exposure_matrix]))
+idx_level_0_value = market_to_market_price.columns.get_level_values(0)
+idx_level_1_value = market_to_market_price.columns.get_level_values(1)
+df_asset_weight = pd.DataFrame({'lower': [0.], 'upper': [1.]},
+                               index=symbols)
+
+df_group_weight = pd.DataFrame({'lower': [0.], 'upper': [1.]},
+                               index=set(idx_level_0_value))
+
+b_asset_matrix = matrix(np.concatenate(((df_asset_weight.upper, df_asset_weight.lower)), 0))
+b_group_matrix = matrix(np.concatenate(((df_group_weight.upper, df_group_weight.lower)), 0))
+b_factor_exposure_matrix = 
+
+# df_group_weight['tactical'] = [(.05,.41), (.2,.66), (0,.16)]
+
+
 
 
 #sol = solvers.qp(P, q, G, h, A, b)
