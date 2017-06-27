@@ -324,8 +324,8 @@ exp_sub = matrix(sparse([exp_sub, - exp_sub]))
 #G = matrix(sparse([G, exp_sub, -exp_sub]))
 
 
-b_asset = [(0.0, .5)] * rets.shape[1]
-b_group = [(0.0, 1.0)] * num_group
+b_asset = [(0.1, 0.15)] * rets.shape[1]
+b_group = [(0.1, 0.4)] * num_group
 
 b_asset_upper_bound = np.array([x[-1] for x in b_asset])
 b_asset_lower_bound = np.array([x[0] for x in b_asset])
@@ -347,7 +347,7 @@ b_factor_exposure_matrix = matrix(np.concatenate(
 #h = matrix(sparse([h, b_factor_exposure_matrix]))
 idx_level_0_value = market_to_market_price.columns.get_level_values(0)
 idx_level_1_value = market_to_market_price.columns.get_level_values(1)
-df_asset_weight = pd.DataFrame({'lower': [0.], 'upper': [1.]},
+df_asset_weight = pd.DataFrame({'lower': [0.1], 'upper': [0.25]},
                                index=symbols)
 
 df_group_weight = pd.DataFrame({'lower': [0.], 'upper': [1.]},
@@ -355,7 +355,7 @@ df_group_weight = pd.DataFrame({'lower': [0.], 'upper': [1.]},
 
 b_asset_matrix = matrix(np.concatenate(((df_asset_weight.upper, df_asset_weight.lower)), 0))
 b_group_matrix = matrix(np.concatenate(((df_group_weight.upper, df_group_weight.lower)), 0))
-b_factor_exposure_matrix = 
+#b_factor_exposure_matrix = 
 
 # df_group_weight['tactical'] = [(.05,.41), (.2,.66), (0,.16)]
 
@@ -382,40 +382,101 @@ h = matrix(sparse([h, b_asset_matrix]))
 boundary_sub = [Group_sub, exp_sub]
 limit = [b_group_matrix, b_factor_exposure_matrix]
 error = ('group ', 'exposure ')
-stuff = [1, 2]
-for L in range(0, len(stuff)+1):
-    for subset in itertools.combinations(stuff, L):
-        if len(subset) == 0:
-            try:
-                # G_pos = matrix(sparse([G, matrix(-np.eye(n), tc='d')]))
-                # h_pos = matrix(sparse([h, matrix(np.zeros((n, 1)))]))
-                sol = solvers.qp(P, q, G, h, A, b)
-                if sol['x'] == 'unknown':
-                    print('failed to get optimal value on position limit constraint')
-            except ValueError as e:
-                raise ConstraintError('ERROR on solving position limit constraint only')
+# stuff = [1, 2]
+# for L in range(0, len(stuff)+1):
+#     for subset in itertools.combinations(stuff, L):
+#         if len(subset) == 0:
+#             try:
+#                 # G_pos = matrix(sparse([G, matrix(-np.eye(n), tc='d')]))
+#                 # h_pos = matrix(sparse([h, matrix(np.zeros((n, 1)))]))
+#                 sol = solvers.qp(P, q, G, h, A, b)
+#                 if sol['x'] == 'unknown':
+#                     print('failed to get optimal value on position limit constraint')
+#             except ValueError as e:
+#                 raise ConstraintError('ERROR on solving position limit constraint only')
 
-        if len(subset) > 0:
-            ls = [x-1 for x in list(subset)]
-            g_matrix = []
-            h_matrix = []
-            g_matrix.append(G)
-            h_matrix.append(h)
-            for i in ls:
-                g_matrix.append(boundary_sub[i])
-                h_matrix.append(limit[i])
+#         if len(subset) > 0:
+#             ls = [x-1 for x in list(subset)]
+#             g_matrix = []
+#             h_matrix = []
+#             g_matrix.append(G)
+#             h_matrix.append(h)
+#             for i in ls:
+#                 g_matrix.append(boundary_sub[i])
+#                 h_matrix.append(limit[i])
 
-            G_val = matrix(sparse(g_matrix))
-            h_val = matrix(sparse(h_matrix))
+#             G_val = matrix(sparse(g_matrix))
+#             h_val = matrix(sparse(h_matrix))
 
-            try:
-                sol = solvers.qp(P, q, G_val, h_val, A, b)
-                if sol['x'] == 'unknown':
-                    print('failed to get optimal value on %s', [error[i] for i in ls])
-            except ValueError as e:
-                raise ConstraintError('ERROR on solving combination %s, %s' % ([error[i] for i in ls], e))
-if sol['status'] == 'optimal':
-    print(sol['x'])
+#             try:
+#                 sol = solvers.qp(P, q, G_val, h_val, A, b)
+#                 if sol['x'] == 'unknown':
+#                     print('failed to get optimal value on %s', [error[i] for i in ls])
+#             except ValueError as e:
+#                 raise ConstraintError('ERROR on solving combination %s, %s' % ([error[i] for i in ls], e))
+# if sol['status'] == 'optimal':
+#     print(sol['x'])
+# else:
+#     print(sol['status'])
+
+
+# Calculate theoretical minimum and maximum theoretical returns
+from copy import deepcopy
+f_min = 0
+f_max = 0
+
+rets = deepcopy(rets)
+
+na_expected = np.average(rets, axis=0)
+
+na_signs = np.sign(na_expected)
+indices = np.where(na_signs == 0)
+na_signs[indices] = 1
+na_signs = np.ones(len(na_signs))
+
+rets = na_signs*rets
+na_expected = na_signs*na_expected
+
+na_sort_ind = na_expected.argsort()
+
+# First add the lower bounds on portfolio participation
+for i, fRet in enumerate(na_expected):
+    f_min = f_min + fRet*df_asset_weight.lower[i]
+    f_max = f_max + fRet*df_asset_weight.lower[i]
+
+
+# Now calculate minimum returns"""
+# allocate the max possible in worst performing equities """
+# Subtract min since we have already counted it """
+na_upper_add = df_asset_weight.upper - df_asset_weight.lower
+f_total_weight = np.sum(df_asset_weight.lower)
+
+for i, ls_ind in enumerate(na_sort_ind):
+    f_ret_add = na_upper_add[ls_ind] * na_expected[ls_ind]
+    f_total_weight = f_total_weight + na_upper_add[ls_ind]
+    f_min = f_min + f_ret_add
+    # Check if this additional percent puts us over the limit """
+    if f_total_weight > 1.0:
+        f_min = f_min - na_expected[ls_ind] * (f_total_weight - 1.0)
+        break
 else:
-    print(sol['status'])
+    raise ValueError("sum of total asset maximum weight is less than 1 ")
+# Repeat for max, just reverse the sort, i.e. high to low """
+na_upper_add = df_asset_weight.upper - df_asset_weight.lower
+f_total_weight = np.sum(df_asset_weight.lower)
+if f_total_weight > 1:
+    raise ValueError("sum of total asset minimum weight is bigger than 1 ")
+for i, ls_ind in enumerate(na_sort_ind[::-1]):
+    f_ret_add = na_upper_add[ls_ind] * na_expected[ls_ind]
+    f_total_weight = f_total_weight + na_upper_add[ls_ind]
+    f_max = f_max + f_ret_add
 
+    # Check if this additional percent puts us over the limit """
+    if f_total_weight > 1.0:
+        f_max = f_max - na_expected[ls_ind] * (f_total_weight - 1.0)
+        break
+else:
+    raise ValueError("sum of total asset minimum weight is bigger than 1 ")
+
+print("max: ", f_max)
+print("min: ", f_min)

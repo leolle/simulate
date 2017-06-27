@@ -31,8 +31,81 @@ def logrels(rets):
     return np.log(rets + 1)
 
 
+def get_ret_range(rets, df_asset_bound, na_expected="false"):
+    ''' Calculate theoretical minimum and maximum theoretical returns.
+
+    Parameters
+    ----------
+    rets: dataframe
+
+    df_asset_bound : dataframe-like
+        Input lower and upper boundary dataframe for each asset.
+
+    Returns
+    -------
+    (f_min, f_max): tuple
+    '''
+    from copy import deepcopy
+    f_min = 0
+    f_max = 0
+
+    rets = deepcopy(rets)
+
+    na_expected = np.average(rets, axis=0)
+
+    na_signs = np.sign(na_expected)
+    indices = np.where(na_signs == 0)
+    na_signs[indices] = 1
+    na_signs = np.ones(len(na_signs))
+
+    rets = na_signs*rets
+    na_expected = na_signs*na_expected
+
+    na_sort_ind = na_expected.argsort()
+
+    # First add the lower bounds on portfolio participation
+    for i, fRet in enumerate(na_expected):
+        f_min = f_min + fRet*df_asset_bound.lower[i]
+        f_max = f_max + fRet*df_asset_bound.lower[i]
+
+
+    # Now calculate minimum returns
+    # allocate the max possible in worst performing equities
+    # Subtract min since we have already counted it
+    na_upper_add = df_asset_bound.upper - df_asset_bound.lower
+    f_total_weight = np.sum(df_asset_bound.lower)
+
+    for i, ls_ind in enumerate(na_sort_ind):
+        f_ret_add = na_upper_add[ls_ind] * na_expected[ls_ind]
+        f_total_weight = f_total_weight + na_upper_add[ls_ind]
+        f_min = f_min + f_ret_add
+        # Check if this additional percent puts us over the limit
+        if f_total_weight > 1.0:
+            f_min = f_min - na_expected[ls_ind] * (f_total_weight - 1.0)
+            break
+    else:
+        raise ValueError("sum of total asset maximum weight is less than 1 ")
+    # Repeat for max, just reverse the sort, i.e. high to low
+    na_upper_add = df_asset_bound.upper - df_asset_bound.lower
+    f_total_weight = np.sum(df_asset_bound.lower)
+    if f_total_weight > 1:
+        raise ValueError("sum of total asset minimum weight is bigger than 1 ")
+    for i, ls_ind in enumerate(na_sort_ind[::-1]):
+        f_ret_add = na_upper_add[ls_ind] * na_expected[ls_ind]
+        f_total_weight = f_total_weight + na_upper_add[ls_ind]
+        f_max = f_max + f_ret_add
+
+        # Check if this additional percent puts us over the limit
+        if f_total_weight > 1.0:
+            f_max = f_max - na_expected[ls_ind] * (f_total_weight - 1.0)
+            break
+
+    return (f_min, f_max)
+
+
 def check_boundary_constraint(df_asset_bound, df_group_bound,
-                              df_exposure_bound, df_exposure):
+                              df_exposure_bound, df_exposure,
+                              target_return, rets):
     ''' check input boundary limit.
 
     Parameters
@@ -86,6 +159,10 @@ def check_boundary_constraint(df_asset_bound, df_group_bound,
 
     if (df_factor_exposure_bound_check.lower > df_exposure_bound.lower).any():
         raise ValueError('factor exposure lower setting error')
+
+    (f_min, f_max) = get_ret_range(rets, df_asset_bound)
+    if target_return < f_min or target_return > f_max:
+        raise ValueError("target not possible")
 
     return True
 
@@ -266,7 +343,7 @@ def CVXOptimizerBnd(context, target_mode, position_limit, risk_model,
         df_industries_asset_target_init_weight, values='value', index=['date'],
         columns=['industry', 'symbol'])
     df_pivot_industries_asset_weights = df_pivot_industries_asset_weights.fillna(0)
-    
+
     noa = len(target_symbols)
     if noa < 1:
         raise ValueError("no intersected symbols from specific risk and initial holding.")
@@ -318,14 +395,14 @@ def CVXOptimizerBnd(context, target_mode, position_limit, risk_model,
     df_factor_exposure_bound.upper = (1.0/noa)*big_X.sum()*(1.000009)
 
     if asset_constraint is not None:
-        df_asset_weight.lower.ix[asset_constraint.lower] = asset_constraint.lower
-        df_asset_weight.upper.ix[asset_constraint.upper] = asset_constraint.upper
+        df_asset_weight.lower.ix[asset_constraint.lower.index] = asset_constraint.lower
+        df_asset_weight.upper.ix[asset_constraint.upper.index] = asset_constraint.upper
     if group_constraint is not None:
-        df_group_weight.lower.ix[group_constraint.lower] = group_constraint.lower
-        df_group_weight.upper.ix[group_constraint.upper] = group_constraint.upper
+        df_group_weight.lower.ix[group_constraint.lower.index] = group_constraint.lower
+        df_group_weight.upper.ix[group_constraint.upper.index] = group_constraint.upper
     if exposure_constraint is not None:
-        df_factor_exposure_bound.lower.ix[exposure_constraint.lower] = exposure_constraint.lower
-        df_factor_exposure_bound.upper.ix[exposure_constraint.upper] = exposure_constraint.upper
+        df_factor_exposure_bound.lower.ix[exposure_constraint.lower.index] = exposure_constraint.lower
+        df_factor_exposure_bound.upper.ix[exposure_constraint.upper.index] = exposure_constraint.upper
 
     if check_boundary_constraint(df_asset_weight, df_group_weight,
                                  df_factor_exposure_bound, big_X):
@@ -338,7 +415,8 @@ def CVXOptimizerBnd(context, target_mode, position_limit, risk_model,
     df_factor_exposure_bnd_matrix = matrix(np.concatenate(((df_factor_exposure_bound.upper,
                                                             df_factor_exposure_bound.lower)), 0))
 
-    rets_mean = logrels(asset_return).mean()
+    # Assuming AvgReturns as the expected returns if parameter is not specified
+    rets_mean = asset_return.mean()
     avg_ret = matrix(rets_mean.values)
     G = matrix(-np.transpose(np.array(avg_ret)))
     h = matrix(-np.ones((1, 1))*target_return)
@@ -387,22 +465,14 @@ def CVXOptimizerBnd(context, target_mode, position_limit, risk_model,
     # Computes a tangency portfolio, i.e. a maximum Sharpe ratio portfolio
     elif target_mode == 2:
         # exp_rets*x >= 1
-        G = matrix(-np.transpose(np.array(avg_ret)))
-        h = matrix(-np.ones((1, 1)))
+        G = matrix(np.vstack((-np.transpose(np.array(avg_ret)), -np.identity(noa))))
+        h = matrix(np.vstack((-np.ones((1, 1)), np.zeros((noa, 1)))))
 
-        if exposure_constraint is not None:
-            G = matrix(sparse([G, asset_sub, Group_sub, exp_sub]))
-            h = matrix(sparse([h, df_asset_bnd_matrix, df_group_bnd_matrix,
-                               df_factor_exposure_bnd_matrix]))
-        else:
-            G = matrix(sparse([G, asset_sub, Group_sub]))
-            h = matrix(sparse([h, df_asset_bnd_matrix, df_group_bnd_matrix]))
         sol = solvers.qp(P, q, G, h)
-        df_opts_weight = pd.DataFrame(np.array(sol['x']).T,
+        # Rescale weights, so that sum(weights) = 1
+        df_opts_weight = pd.DataFrame(np.array(sol['x']/np.sum(sol['x'])).T,
                                       columns=target_symbols,
                                       index=[target_date])
-        # Rescale weights, so that sum(weights) = 1
-        df_opts_weight /= df_opts_weight.sum(axis=1)
 
     if sol['status'] == 'optimal':
         print('result is optimal')
@@ -410,3 +480,5 @@ def CVXOptimizerBnd(context, target_mode, position_limit, risk_model,
         warnings.warn('Convergence problem, the algorithm failed to find a solution that satisfies the specified tolerances')
 
     return df_opts_weight
+
+

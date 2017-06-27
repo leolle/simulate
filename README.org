@@ -30,8 +30,13 @@ Wall time: 548us.
 CLOSED: [2017-06-26 Mon 11:47]
 - create boundary dataframe, fill input dataframe na with 0 on lower bound, 1 on upper bound.
 default value from min and max of each factor.
-** change random selected symbols to ranked symbols.
-** sharpe portfolio.
+** DONE integrate finished functions to GS .
+CLOSED: [2017-06-27 Tue 09:59]
+** DONE sharpe portfolio.
+CLOSED: [2017-06-27 Tue 09:58]
+** DONE calculate theoretical minimum and maximum theoretical returns.
+CLOSED: [2017-06-27 Tue 15:18]
 ** add loss function objective.
 like minimum risk, max return, max sharpe ratio etc.
 ** add transaction cost.
+** change random selected symbols to ranked symbols.
