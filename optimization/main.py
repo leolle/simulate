@@ -403,24 +403,6 @@ def CVXOptimizerBnd(context, target_mode, position_limit, risk_model,
                                       index=[target_date])
         # Rescale weights, so that sum(weights) = 1
         df_opts_weight /= df_opts_weight.sum(axis=1)
-    # # maximum return subject to target risk
-    # elif target_mode == 2:
-    #     N = 1000
-    #     mus = [10**(5.0*t/N-0.0) for t in range(N)]
-    #     G = matrix(sparse([asset_sub, Group_sub,
-    #                        exp_sub]))
-    #     h = matrix(sparse([b_asset_matrix, b_group_matrix,
-    #                        b_factor_exposure_matrix]))
-    #     xs = [solvers.qp(mu*P, q, G, h, A, b)['x', 'status'] for mu in mus]
-    #     # returns = [dot(matrix(logrels(asset_return).mean()).T, x['x'])
-    #     #           for x in xs]
-    #     risk = [dot(x['x'], P*x['x']) for x in xs]
-
-    #     target_risk_index = find_nearest(risk, target_risk)
-    #     df_opts_weight = pd.DataFrame(np.array(xs[target_risk_index]).T,
-    #                                   columns=target_symbols,
-    #                                   index=[target_date])
-    #     sol['status'] = xs[target_risk_index]['status']
 
     if sol['status'] == 'optimal':
         print('result is optimal')
