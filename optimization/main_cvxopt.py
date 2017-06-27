@@ -324,8 +324,8 @@ exp_sub = matrix(sparse([exp_sub, - exp_sub]))
 #G = matrix(sparse([G, exp_sub, -exp_sub]))
 
 
-b_asset = [(0.1, 0.15)] * rets.shape[1]
-b_group = [(0.1, 0.4)] * num_group
+b_asset = [(0.001, 0.55)] * rets.shape[1]
+b_group = [(0.001, 0.4)] * num_group
 
 b_asset_upper_bound = np.array([x[-1] for x in b_asset])
 b_asset_lower_bound = np.array([x[0] for x in b_asset])
@@ -347,7 +347,7 @@ b_factor_exposure_matrix = matrix(np.concatenate(
 #h = matrix(sparse([h, b_factor_exposure_matrix]))
 idx_level_0_value = market_to_market_price.columns.get_level_values(0)
 idx_level_1_value = market_to_market_price.columns.get_level_values(1)
-df_asset_weight = pd.DataFrame({'lower': [0.1], 'upper': [0.25]},
+df_asset_weight = pd.DataFrame({'lower': [0.01], 'upper': [0.25]},
                                index=symbols)
 
 df_group_weight = pd.DataFrame({'lower': [0.], 'upper': [1.]},
@@ -419,62 +419,187 @@ error = ('group ', 'exposure ')
 # else:
 #     print(sol['status'])
 
+# ##################################################################
+# # Calculate theoretical minimum and maximum theoretical returns
+# from copy import deepcopy
+# f_min = 0
+# f_max = 0
 
-# Calculate theoretical minimum and maximum theoretical returns
-from copy import deepcopy
-f_min = 0
-f_max = 0
+# rets = deepcopy(rets)
 
-rets = deepcopy(rets)
+# na_expected = np.average(rets, axis=0)
 
-na_expected = np.average(rets, axis=0)
+# na_signs = np.sign(na_expected)
+# indices = np.where(na_signs == 0)
+# na_signs[indices] = 1
+# na_signs = np.ones(len(na_signs))
 
-na_signs = np.sign(na_expected)
-indices = np.where(na_signs == 0)
-na_signs[indices] = 1
-na_signs = np.ones(len(na_signs))
+# rets = na_signs*rets
+# na_expected = na_signs*na_expected
 
-rets = na_signs*rets
-na_expected = na_signs*na_expected
+# na_sort_ind = na_expected.argsort()
 
-na_sort_ind = na_expected.argsort()
-
-# First add the lower bounds on portfolio participation
-for i, fRet in enumerate(na_expected):
-    f_min = f_min + fRet*df_asset_weight.lower[i]
-    f_max = f_max + fRet*df_asset_weight.lower[i]
+# # First add the lower bounds on portfolio participation
+# for i, fRet in enumerate(na_expected):
+#     f_min = f_min + fRet*df_asset_weight.lower[i]
+#     f_max = f_max + fRet*df_asset_weight.lower[i]
 
 
-# Now calculate minimum returns"""
-# allocate the max possible in worst performing equities """
-# Subtract min since we have already counted it """
-na_upper_add = df_asset_weight.upper - df_asset_weight.lower
-f_total_weight = np.sum(df_asset_weight.lower)
+# # Now calculate minimum returns"""
+# # allocate the max possible in worst performing equities """
+# # Subtract min since we have already counted it """
+# na_upper_add = df_asset_weight.upper - df_asset_weight.lower
+# f_total_weight = np.sum(df_asset_weight.lower)
 
-for i, ls_ind in enumerate(na_sort_ind):
-    f_ret_add = na_upper_add[ls_ind] * na_expected[ls_ind]
-    f_total_weight = f_total_weight + na_upper_add[ls_ind]
-    f_min = f_min + f_ret_add
-    # Check if this additional percent puts us over the limit """
-    if f_total_weight > 1.0:
-        f_min = f_min - na_expected[ls_ind] * (f_total_weight - 1.0)
-        break
-else:
-    raise ValueError("sum of total asset maximum weight is less than 1 ")
-# Repeat for max, just reverse the sort, i.e. high to low """
-na_upper_add = df_asset_weight.upper - df_asset_weight.lower
-f_total_weight = np.sum(df_asset_weight.lower)
-if f_total_weight > 1:
-    raise ValueError("sum of total asset minimum weight is bigger than 1 ")
-for i, ls_ind in enumerate(na_sort_ind[::-1]):
-    f_ret_add = na_upper_add[ls_ind] * na_expected[ls_ind]
-    f_total_weight = f_total_weight + na_upper_add[ls_ind]
-    f_max = f_max + f_ret_add
+# for i, ls_ind in enumerate(na_sort_ind):
+#     f_ret_add = na_upper_add[ls_ind] * na_expected[ls_ind]
+#     f_total_weight = f_total_weight + na_upper_add[ls_ind]
+#     f_min = f_min + f_ret_add
+#     # Check if this additional percent puts us over the limit """
+#     if f_total_weight > 1.0:
+#         f_min = f_min - na_expected[ls_ind] * (f_total_weight - 1.0)
+#         break
+# else:
+#     raise ValueError("sum of total asset maximum weight is less than 1 ")
+# # Repeat for max, just reverse the sort, i.e. high to low """
+# na_upper_add = df_asset_weight.upper - df_asset_weight.lower
+# f_total_weight = np.sum(df_asset_weight.lower)
+# if f_total_weight > 1:
+#     raise ValueError("sum of total asset minimum weight is bigger than 1 ")
+# for i, ls_ind in enumerate(na_sort_ind[::-1]):
+#     f_ret_add = na_upper_add[ls_ind] * na_expected[ls_ind]
+#     f_total_weight = f_total_weight + na_upper_add[ls_ind]
+#     f_max = f_max + f_ret_add
 
-    # Check if this additional percent puts us over the limit """
-    if f_total_weight > 1.0:
-        f_max = f_max - na_expected[ls_ind] * (f_total_weight - 1.0)
-        break
+#     # Check if this additional percent puts us over the limit """
+#     if f_total_weight > 1.0:
+#         f_max = f_max - na_expected[ls_ind] * (f_total_weight - 1.0)
+#         break
 
-print("max: ", f_max)
-print("min: ", f_min)
+# print("max: ", f_max)
+# print("min: ", f_min)
+
+
+####################################################################
+
+def get_ret_range(rets, df_asset_bound):
+    ''' Calculate theoretical minimum and maximum theoretical returns.
+
+    Parameters
+    ----------
+    rets: dataframe
+
+    df_asset_bound : dataframe-like
+        Input lower and upper boundary dataframe for each asset.
+
+    Returns
+    -------
+    (f_min, f_max): tuple
+    '''
+    from copy import deepcopy
+    f_min = 0
+    f_max = 0
+
+    rets = deepcopy(rets)
+
+    na_expected = np.average(rets, axis=0)
+
+    na_signs = np.sign(na_expected)
+    indices = np.where(na_signs == 0)
+    na_signs[indices] = 1
+    na_signs = np.ones(len(na_signs))
+
+    rets = na_signs*rets
+    na_expected = na_signs*na_expected
+
+    na_sort_ind = na_expected.argsort()
+
+    # First add the lower bounds on portfolio participation
+    for i, fRet in enumerate(na_expected):
+        f_min = f_min + fRet*df_asset_bound.lower[i]
+        f_max = f_max + fRet*df_asset_bound.lower[i]
+
+
+    # Now calculate minimum returns
+    # allocate the max possible in worst performing equities
+    # Subtract min since we have already counted it
+    na_upper_add = df_asset_bound.upper - df_asset_bound.lower
+    f_total_weight = np.sum(df_asset_bound.lower)
+
+    for i, ls_ind in enumerate(na_sort_ind):
+        f_ret_add = na_upper_add[ls_ind] * na_expected[ls_ind]
+        f_total_weight = f_total_weight + na_upper_add[ls_ind]
+        f_min = f_min + f_ret_add
+        # Check if this additional percent puts us over the limit
+        if f_total_weight > 1.0:
+            f_min = f_min - na_expected[ls_ind] * (f_total_weight - 1.0)
+            break
+    else:
+        raise ValueError("sum of total asset maximum weight is less than 1 ")
+    # Repeat for max, just reverse the sort, i.e. high to low
+    na_upper_add = df_asset_bound.upper - df_asset_bound.lower
+    f_total_weight = np.sum(df_asset_bound.lower)
+    if f_total_weight > 1:
+        raise ValueError("sum of total asset minimum weight is bigger than 1 ")
+    for i, ls_ind in enumerate(na_sort_ind[::-1]):
+        f_ret_add = na_upper_add[ls_ind] * na_expected[ls_ind]
+        f_total_weight = f_total_weight + na_upper_add[ls_ind]
+        f_max = f_max + f_ret_add
+
+        # Check if this additional percent puts us over the limit
+        if f_total_weight > 1.0:
+            f_max = f_max - na_expected[ls_ind] * (f_total_weight - 1.0)
+            break
+
+    return (f_min, f_max)
+
+
+G = matrix(-np.transpose((rets.mean())), (1, n))
+
+(f_min, f_max) = get_ret_range(rets, df_asset_weight)
+f_step = (f_max - f_min) / 100
+ls_f_return = [f_min + x * f_step for x in range(101)]
+ls_f_risk = []
+ls_portfolio = []
+for f_target_return in ls_f_return:
+    h = matrix(-np.ones((1, 1))*f_target_return)
+    G_sr = matrix(sparse([G, asset_sub, Group_sub]))
+    h_sr = matrix(sparse([h, b_asset_matrix, b_group_matrix]))
+    try:
+        sol = solvers.qp(P, q, G_sr, h_sr, A, b)
+    except:
+        ls_f_risk.append(np.nan)
+        ls_portfolio.append(None)
+        continue
+    ls_f_risk.append(statistics(sol['x'])[1])
+    df_opts_weight = pd.DataFrame(np.array(sol['x']).T,
+                                  columns=symbols)
+    ls_portfolio.append(df_opts_weight)
+
+def find_nearest(array, value):
+    """ Find the nearest value index from an array"""
+    if isinstance(array, list):
+        array = np.array(array)
+    idx = (np.abs(array-value)).argmin()
+    return idx
+
+#target_risk = find_nearest(ls_f_risk, 0.13492336)
+target_risk = 0.13492336
+
+f_return = ls_f_return[ls_f_risk.index(min(ls_f_risk))]
+ls_f_return_new = np.array(ls_f_return)
+ls_f_risk_new = np.array(ls_f_risk)
+ls_f_risk_new = ls_f_risk_new[ls_f_risk <= target_risk]
+ls_f_return_new = ls_f_return_new[ls_f_risk <= target_risk]
+na_sharpe_ratio = ls_f_return_new / ls_f_risk_new
+i_index_max_sharpe = np.where(na_sharpe_ratio == max(na_sharpe_ratio))
+i_index_max_sharpe = i_index_max_sharpe[0]
+f_target_return = ls_f_return_new[i_index_max_sharpe]
+h = matrix(-np.ones((1, 1))*f_target_return)
+
+G_sr = matrix(sparse([G, asset_sub, Group_sub]))
+h_sr = matrix(sparse([h, b_asset_matrix, b_group_matrix]))
+sol = solvers.qp(P, q, G_sr, h_sr, A, b)
+df_opts_weight = pd.DataFrame(np.array(sol['x']).T,
+                              columns=symbols)
+

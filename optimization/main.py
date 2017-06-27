@@ -31,7 +31,7 @@ def logrels(rets):
     return np.log(rets + 1)
 
 
-def get_ret_range(rets, df_asset_bound, na_expected="false"):
+def get_ret_range(rets, df_asset_bound):
     ''' Calculate theoretical minimum and maximum theoretical returns.
 
     Parameters
@@ -229,7 +229,7 @@ def find_nearest(array, value):
     """ Find the nearest value index from an array"""
     if isinstance(array, list):
         array = np.array(array)
-        idx = (np.abs(array-value)).argmin()
+    idx = (np.abs(array-value)).argmin()
     return idx
 
 
@@ -463,16 +463,57 @@ def CVXOptimizerBnd(context, target_mode, position_limit, risk_model,
                                       index=[target_date])
     # Computes a tangency portfolio, i.e. a maximum Sharpe ratio portfolio
     elif target_mode == 2:
-        # exp_rets*x >= 1
-        G = matrix(np.vstack((-np.transpose(np.array(avg_ret)), -np.identity(noa))))
-        h = matrix(np.vstack((-np.ones((1, 1)), np.zeros((noa, 1)))))
+        (f_min, f_max) = get_ret_range(asset_return, df_asset_weight)
+        f_step = (f_max - f_min) / 100
+        ls_f_return = [f_min + x * f_step for x in range(101)]
+        ls_f_risk = []
+        ls_portfolio = []
+        for f_target_return in ls_f_return:
+            h = matrix(-np.ones((1, 1))*f_target_return)
+            if exposure_constraint is not None:
+                G_sr = matrix(sparse([G, asset_sub, Group_sub, exp_sub]))
+                h_sr = matrix(sparse([h, df_asset_bnd_matrix,
+                                      df_group_bnd_matrix,
+                                      df_factor_exposure_bnd_matrix]))
+            else:
+                G_sr = matrix(sparse([G, asset_sub, Group_sub]))
+                h_sr = matrix(sparse([h, df_asset_bnd_matrix,
+                                      df_group_bnd_matrix]))
+            try:
+                sol = solvers.qp(P, q, G_sr, h_sr, A, b)
+            except:
+                ls_f_risk.append(np.nan)
+                ls_portfolio.append(None)
+                continue
+            ls_f_risk.append(statistics(sol['x'], asset_return, cov_matrix_V)[1])
+            df_opts_weight = pd.DataFrame(np.array(sol['x']).T,
+                                          columns=target_symbols,
+                                          index=[target_date])
+            ls_portfolio.append(df_opts_weight)
 
-        sol = solvers.qp(P, q, G, h)
-        # Rescale weights, so that sum(weights) = 1
-        df_opts_weight = pd.DataFrame(np.array(sol['x']/np.sum(sol['x'])).T,
+        #f_return = ls_f_return[ls_f_risk.index(min(ls_f_risk))]
+        ls_f_return_new = np.array(ls_f_return)
+        ls_f_risk_new = np.array(ls_f_risk)
+        ls_f_risk_new = ls_f_risk_new[ls_f_risk_new <= target_risk]
+        ls_f_return_new = ls_f_return_new[ls_f_risk_new <= target_risk]
+        na_sharpe_ratio = ls_f_return_new / ls_f_risk_new
+        i_index_max_sharpe = np.where(na_sharpe_ratio == max(na_sharpe_ratio))
+        i_index_max_sharpe = i_index_max_sharpe[0]
+        f_target = ls_f_return_new[i_index_max_sharpe]
+        h = matrix(-np.ones((1, 1))*f_target)
+        if exposure_constraint is not None:
+            G_sr = matrix(sparse([G, asset_sub, Group_sub, exp_sub]))
+            h_sr = matrix(sparse([h, df_asset_bnd_matrix,
+                                  df_group_bnd_matrix,
+                                  df_factor_exposure_bnd_matrix]))
+        else:
+            G_sr = matrix(sparse([G, asset_sub, Group_sub]))
+            h_sr = matrix(sparse([h, df_asset_bnd_matrix,
+                                  df_group_bnd_matrix]))
+        sol = solvers.qp(P, q, G_sr, h_sr, A, b)
+        df_opts_weight = pd.DataFrame(np.array(sol['x']).T,
                                       columns=target_symbols,
                                       index=[target_date])
-
     if sol['status'] == 'optimal':
         print('result is optimal')
     elif sol['status'] == 'unknown':
