@@ -104,8 +104,7 @@ def get_ret_range(rets, df_asset_bound, na_expected="false"):
 
 
 def check_boundary_constraint(df_asset_bound, df_group_bound,
-                              df_exposure_bound, df_exposure,
-                              target_return, rets):
+                              df_exposure_bound, df_exposure):
     ''' check input boundary limit.
 
     Parameters
@@ -159,10 +158,6 @@ def check_boundary_constraint(df_asset_bound, df_group_bound,
 
     if (df_factor_exposure_bound_check.lower > df_exposure_bound.lower).any():
         raise ValueError('factor exposure lower setting error')
-
-    (f_min, f_max) = get_ret_range(rets, df_asset_bound)
-    if target_return < f_min or target_return > f_max:
-        raise ValueError("target not possible")
 
     return True
 
@@ -416,7 +411,7 @@ def CVXOptimizerBnd(context, target_mode, position_limit, risk_model,
                                                             df_factor_exposure_bound.lower)), 0))
 
     # Assuming AvgReturns as the expected returns if parameter is not specified
-    rets_mean = asset_return.mean()
+    rets_mean = logrels(asset_return).mean()
     avg_ret = matrix(rets_mean.values)
     G = matrix(-np.transpose(np.array(avg_ret)))
     h = matrix(-np.ones((1, 1))*target_return)
@@ -451,6 +446,10 @@ def CVXOptimizerBnd(context, target_mode, position_limit, risk_model,
                                       index=[target_date])
     # minimum risk subject to target return, Markowitz Mean_Variance Portfolio
     elif target_mode == 1:
+
+        (f_min, f_max) = get_ret_range(asset_return, df_asset_weight)
+        if target_return < f_min or target_return > f_max:
+            raise ValueError("target return not possible")
         if exposure_constraint is not None:
             G = matrix(sparse([G, asset_sub, Group_sub, exp_sub]))
             h = matrix(sparse([h, df_asset_bnd_matrix, df_group_bnd_matrix,

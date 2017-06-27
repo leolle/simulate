@@ -475,8 +475,6 @@ for i, ls_ind in enumerate(na_sort_ind[::-1]):
     if f_total_weight > 1.0:
         f_max = f_max - na_expected[ls_ind] * (f_total_weight - 1.0)
         break
-else:
-    raise ValueError("sum of total asset minimum weight is bigger than 1 ")
 
 print("max: ", f_max)
 print("min: ", f_min)
