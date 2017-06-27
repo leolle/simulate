@@ -3,6 +3,7 @@ import pandas as pd
 import numpy as np
 import re
 import os
+import warnings
 from cvxopt import matrix, solvers, spmatrix, sparse
 from cvxopt.blas import dot
 
@@ -160,10 +161,10 @@ def find_nearest(array, value):
     return idx
 
 
-def CVXOptimizer(context, target_mode, position_limit, risk_model,
-                 asset_return, asset_weight, target_risk,
-                 target_return, target_date, asset_constraint,
-                 group_constraint, exposure_constraint):
+def CVXOptimizerBnd(context, target_mode, position_limit, risk_model,
+                    asset_return, asset_weight, target_risk,
+                    target_return, target_date, asset_constraint,
+                    group_constraint, exposure_constraint):
     """
     optimize fund weight target on different constraints, objective, based on
     target type and mode, fund return target, fund weight, group weight， etc.
@@ -211,11 +212,11 @@ def CVXOptimizer(context, target_mode, position_limit, risk_model,
     asset_return = asset_return.asMatrix()
     asset_weights = asset_weight.asColumnTab()
     target_date = pd.to_datetime(target_date)
-    if len(asset_constraint > 0):
+    if asset_constraint is not None:
         asset_constraint = asset_constraint.asMatrix()
-    if len(group_constraint > 0):
+    if group_constraint is not None:
         group_constraint = group_constraint.asMatrix()
-    if len(exposure_constraint > 0):
+    if exposure_constraint is not None:
         exposure_constaint = exposure_constraint.asMatrix()
 
     # regex to search all the factors
@@ -316,17 +317,15 @@ def CVXOptimizer(context, target_mode, position_limit, risk_model,
     df_factor_exposure_bound.lower = (1.0/noa)*big_X.sum()*(0.999991)
     df_factor_exposure_bound.upper = (1.0/noa)*big_X.sum()*(1.000009)
 
-    if len(asset_constraint) > 0:
+    if asset_constraint is not None:
         df_asset_weight.lower.ix[asset_constraint.lower] = asset_constraint.lower
         df_asset_weight.upper.ix[asset_constraint.upper] = asset_constraint.upper
-    if len(group_constraint) > 0:
+    if group_constraint is not None:
         df_group_weight.lower.ix[group_constraint.lower] = group_constraint.lower
         df_group_weight.upper.ix[group_constraint.upper] = group_constraint.upper
-    if len(exposure_constraint) > 0:
-        df_factor_exposure_bound.lower.ix[exposure_constraint.lower]\
-            = exposure_constraint.lower
-        df_factor_exposure_bound.upper.ix[exposure_constraint.upper]\
-            = exposure_constraint.upper
+    if exposure_constraint is not None:
+        df_factor_exposure_bound.lower.ix[exposure_constraint.lower] = exposure_constraint.lower
+        df_factor_exposure_bound.upper.ix[exposure_constraint.upper] = exposure_constraint.upper
 
     if check_boundary_constraint(df_asset_weight, df_group_weight,
                                  df_factor_exposure_bound, big_X):
@@ -336,10 +335,8 @@ def CVXOptimizer(context, target_mode, position_limit, risk_model,
                                                   df_asset_weight.lower)), 0))
     df_group_bnd_matrix = matrix(np.concatenate(((df_group_weight.upper,
                                                   df_group_weight.lower)), 0))
-
-    if check_boundary_constraint(df_asset_weight, df_group_weight,
-                                 df_factor_exposure_bound, big_X):
-        print("constraint setting is OK")
+    df_factor_exposure_bnd_matrix = matrix(np.concatenate(((df_factor_exposure_bound.upper,
+                                                            df_factor_exposure_bound.lower)), 0))
 
     rets_mean = logrels(asset_return).mean()
     avg_ret = matrix(rets_mean.values)
@@ -357,43 +354,77 @@ def CVXOptimizer(context, target_mode, position_limit, risk_model,
     asset_sub = matrix(sparse([asset_sub, -asset_sub]))
     exp_sub = matrix(np.array(big_X.T))
     exp_sub = matrix(sparse([exp_sub, - exp_sub]))
-    #G = matrix(sparse([G, asset_sub]))
 
-    h = matrix(sparse([h, b_asset_matrix, b_group_matrix, b_factor_exposure_matrix]))
-
+    # minimum risk
     if target_mode == 0:
-        G = matrix(-np.eye(noa), tc='d')
-        h = matrix(-np.zeros((noa, 1)), tc='d')
-        sol = solvers.qp(P, q, G, h, A, b)
-        df_opts_weight = pd.DataFrame(np.array(sol['x']).T,
-                                      columns=target_symbols,
-                                      index=[target_date])
-    elif target_mode == 1:
-        sol = solvers.qp(P, q, G, h, A, b)
-        df_opts_weight = pd.DataFrame(np.array(sol['x']).T,
-                                      columns=target_symbols,
-                                      index=[target_date])
-    elif target_mode == 2:
-        N = 1000
-        mus = [10**(5.0*t/N-0.0) for t in range(N)]
-        G = matrix(sparse([asset_sub, -asset_sub, Group_sub, -Group_sub,
-                           exp_sub, -exp_sub]))
-        h = matrix(sparse([b_asset_matrix, b_group_matrix,
-                           b_factor_exposure_matrix]))
-        xs = [solvers.qp(mu*P, q, G, h, A, b)['x', 'status'] for mu in mus]
-        # returns = [dot(matrix(logrels(asset_return).mean()).T, x['x'])
-        #           for x in xs]
-        risk = [dot(x['x'], P*x['x']) for x in xs]
+        # G = matrix(-np.eye(noa), tc='d')
+        # h = matrix(-np.zeros((noa, 1)), tc='d')
+        if exposure_constraint is not None:
+            G = matrix(sparse([asset_sub, Group_sub, exp_sub]))
+            h = matrix(sparse([df_asset_bnd_matrix, df_group_bnd_matrix,
+                               df_factor_exposure_bnd_matrix]))
+        else:
+            G = matrix(sparse([asset_sub, Group_sub]))
+            h = matrix(sparse([df_asset_bnd_matrix, df_group_bnd_matrix]))
 
-        target_risk_index = find_nearest(risk, target_risk)
-        df_opts_weight = pd.DataFrame(np.array(xs[target_risk_index]).T,
+        sol = solvers.qp(P, q, G, h, A, b)
+        df_opts_weight = pd.DataFrame(np.array(sol['x']).T,
                                       columns=target_symbols,
                                       index=[target_date])
-        sol['status'] = xs[target_risk_index]['status']
+    # minimum risk subject to target return, Markowitz Mean_Variance Portfolio
+    elif target_mode == 1:
+        if exposure_constraint is not None:
+            G = matrix(sparse([G, asset_sub, Group_sub, exp_sub]))
+            h = matrix(sparse([h, df_asset_bnd_matrix, df_group_bnd_matrix,
+                               df_factor_exposure_bnd_matrix]))
+        else:
+            G = matrix(sparse([G, asset_sub, Group_sub]))
+            h = matrix(sparse([h, df_asset_bnd_matrix, df_group_bnd_matrix]))
+        sol = solvers.qp(P, q, G, h, A, b)
+        df_opts_weight = pd.DataFrame(np.array(sol['x']).T,
+                                      columns=target_symbols,
+                                      index=[target_date])
+    # Computes a tangency portfolio, i.e. a maximum Sharpe ratio portfolio
+    elif target_mode == 2:
+        # exp_rets*x >= 1
+        G = matrix(-np.transpose(np.array(avg_ret)))
+        h = matrix(-np.ones((1, 1)))
+
+        if exposure_constraint is not None:
+            G = matrix(sparse([G, asset_sub, Group_sub, exp_sub]))
+            h = matrix(sparse([h, df_asset_bnd_matrix, df_group_bnd_matrix,
+                               df_factor_exposure_bnd_matrix]))
+        else:
+            G = matrix(sparse([G, asset_sub, Group_sub]))
+            h = matrix(sparse([h, df_asset_bnd_matrix, df_group_bnd_matrix]))
+        sol = solvers.qp(P, q, G, h)
+        df_opts_weight = pd.DataFrame(np.array(sol['x']).T,
+                                      columns=target_symbols,
+                                      index=[target_date])
+        # Rescale weights, so that sum(weights) = 1
+        df_opts_weight /= df_opts_weight.sum(axis=1)
+    # # maximum return subject to target risk
+    # elif target_mode == 2:
+    #     N = 1000
+    #     mus = [10**(5.0*t/N-0.0) for t in range(N)]
+    #     G = matrix(sparse([asset_sub, Group_sub,
+    #                        exp_sub]))
+    #     h = matrix(sparse([b_asset_matrix, b_group_matrix,
+    #                        b_factor_exposure_matrix]))
+    #     xs = [solvers.qp(mu*P, q, G, h, A, b)['x', 'status'] for mu in mus]
+    #     # returns = [dot(matrix(logrels(asset_return).mean()).T, x['x'])
+    #     #           for x in xs]
+    #     risk = [dot(x['x'], P*x['x']) for x in xs]
+
+    #     target_risk_index = find_nearest(risk, target_risk)
+    #     df_opts_weight = pd.DataFrame(np.array(xs[target_risk_index]).T,
+    #                                   columns=target_symbols,
+    #                                   index=[target_date])
+    #     sol['status'] = xs[target_risk_index]['status']
 
     if sol['status'] == 'optimal':
         print('result is optimal')
     elif sol['status'] == 'unknown':
-        print('the algorithm failed to find a solution that satisfies the specified tolerances')
-        raise('failed')
+        warnings.warn('Convergence problem, the algorithm failed to find a solution that satisfies the specified tolerances')
+
     return df_opts_weight

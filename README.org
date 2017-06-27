@@ -30,6 +30,8 @@ Wall time: 548us.
 CLOSED: [2017-06-26 Mon 11:47]
 - create boundary dataframe, fill input dataframe na with 0 on lower bound, 1 on upper bound.
 default value from min and max of each factor.
+** change random selected symbols to ranked symbols.
 ** sharpe portfolio.
 ** add loss function objective.
+like minimum risk, max return, max sharpe ratio etc.
 ** add transaction cost.
