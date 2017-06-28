@@ -350,7 +350,7 @@ idx_level_1_value = market_to_market_price.columns.get_level_values(1)
 df_asset_weight = pd.DataFrame({'lower': [0.01], 'upper': [0.25]},
                                index=symbols)
 
-df_group_weight = pd.DataFrame({'lower': [0.], 'upper': [1.]},
+df_group_weight = pd.DataFrame({'lower': [0.01], 'upper': [0.4]},
                                index=set(idx_level_0_value))
 
 b_asset_matrix = matrix(np.concatenate(((df_asset_weight.upper, df_asset_weight.lower)), 0))
@@ -554,6 +554,14 @@ def get_ret_range(rets, df_asset_bound):
     return (f_min, f_max)
 
 
+unsorted_level_0_value = idx_level_0_value.drop_duplicates()
+group_rets_min = rets.mean().sort_values(ascending=True).groupby(level=0).head(1).ix[unsorted_level_0_value].index
+group_rets_max = rets.mean().sort_values(ascending=False).groupby(level=0).head(1).ix[unsorted_level_0_value].index
+
+
+f_g_min = get_ret_range(group_rets_min, df_group_weight)[0]
+f_g_max = get_ret_range(group_rets_max, df_group_weight)[1]
+
 G = matrix(-np.transpose((rets.mean())), (1, n))
 
 (f_min, f_max) = get_ret_range(rets, df_asset_weight)
@@ -584,22 +592,22 @@ def find_nearest(array, value):
     return idx
 
 #target_risk = find_nearest(ls_f_risk, 0.13492336)
-target_risk = 0.13492336
+# target_risk = 0.13492336
 
-f_return = ls_f_return[ls_f_risk.index(min(ls_f_risk))]
-ls_f_return_new = np.array(ls_f_return)
-ls_f_risk_new = np.array(ls_f_risk)
-ls_f_risk_new = ls_f_risk_new[ls_f_risk <= target_risk]
-ls_f_return_new = ls_f_return_new[ls_f_risk <= target_risk]
-na_sharpe_ratio = ls_f_return_new / ls_f_risk_new
-i_index_max_sharpe = np.where(na_sharpe_ratio == max(na_sharpe_ratio))
-i_index_max_sharpe = i_index_max_sharpe[0]
-f_target_return = ls_f_return_new[i_index_max_sharpe]
-h = matrix(-np.ones((1, 1))*f_target_return)
+# f_return = ls_f_return[ls_f_risk.index(min(ls_f_risk))]
+# ls_f_return_new = np.array(ls_f_return)
+# ls_f_risk_new = np.array(ls_f_risk)
+# ls_f_risk_new = ls_f_risk_new[ls_f_risk <= target_risk]
+# ls_f_return_new = ls_f_return_new[ls_f_risk <= target_risk]
+# na_sharpe_ratio = ls_f_return_new / ls_f_risk_new
+# i_index_max_sharpe = np.where(na_sharpe_ratio == max(na_sharpe_ratio))
+# i_index_max_sharpe = i_index_max_sharpe[0]
+# f_target_return = ls_f_return_new[i_index_max_sharpe]
+# h = matrix(-np.ones((1, 1))*f_target_return)
 
-G_sr = matrix(sparse([G, asset_sub, Group_sub]))
-h_sr = matrix(sparse([h, b_asset_matrix, b_group_matrix]))
-sol = solvers.qp(P, q, G_sr, h_sr, A, b)
-df_opts_weight = pd.DataFrame(np.array(sol['x']).T,
-                              columns=symbols)
+# G_sr = matrix(sparse([G, asset_sub, Group_sub]))
+# h_sr = matrix(sparse([h, b_asset_matrix, b_group_matrix]))
+# sol = solvers.qp(P, q, G_sr, h_sr, A, b)
+# df_opts_weight = pd.DataFrame(np.array(sol['x']).T,
+#                               columns=symbols)
 

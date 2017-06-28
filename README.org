@@ -34,8 +34,12 @@ default value from min and max of each factor.
 CLOSED: [2017-06-27 Tue 09:59]
 ** DONE sharpe portfolio.
 CLOSED: [2017-06-27 Tue 09:58]
-** DONE calculate theoretical minimum and maximum theoretical returns.
+** DONE calculate theoretical minimum and maximum theoretical returns from asset constraint.
 CLOSED: [2017-06-27 Tue 15:18]
+** DONE calculate theoretical min and max theoretical returns from group constraint.
+CLOSED: [2017-06-28 Wed 14:32]
+** TODO compare portfolio between maximum sharpe ratio portfolio and Mean-Variance portfolio.
+** change modifying default constraint value.
 ** add loss function objective.
 like minimum risk, max return, max sharpe ratio etc.
 ** add transaction cost.

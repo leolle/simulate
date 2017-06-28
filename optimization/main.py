@@ -162,6 +162,81 @@ def check_boundary_constraint(df_asset_bound, df_group_bound,
     return True
 
 
+class ConstraintError(Exception):
+    pass
+
+
+def check_constraint_issue(mx_P, mx_q, mx_G, mx_h, mx_A, mx_b, mx_asset_sub, mx_group_sub, mx_exp_sub,
+                           mx_asset_bnd, mx_group_bnd, mx_exp_bnd):
+    ''' check which constraint fails.
+
+    Parameters
+    ----------
+    mx_G: 1xn matrix
+        matrix only includes returns.
+    mx_h: 1x1 matrix
+        target return matrix.
+    mx_asset_sub: 2nxn matrix, n=asset number
+        2 nx1 identity matrices.
+    mx_group_sub: 2axn matrix, a=group number
+        2 axn spmatrices.
+    mx_exp_sub: 2bxn matrix, b=exposure factors number
+        2bxn identity matrices.
+    mx_asset_bnd: 2nx1 matrix, n=asset number
+        asset weight constraint matrix
+    mx_group_bnd: 2ax1 matrix, a=group number
+        group weight constraint matrix
+    mx_exp_bnd: 2bx1 matrix, b=exposure factors number
+        factor exposure constraint matrix
+
+    Returns
+    -------
+    None
+    '''
+    import itertools
+    raise ValueError('short is not supported.')
+    G = matrix(sparse([mx_G, mx_asset_sub]))
+    h = matrix(sparse([mx_h, mx_asset_bnd]))
+
+    boundary_sub = [mx_group_sub, mx_exp_sub]
+    limit = [mx_group_bnd, mx_exp_bnd]
+    error = ('group ', 'exposure ')
+    stuff = [1, 2]
+    for L in range(0, len(stuff)+1):
+        for subset in itertools.combinations(stuff, L):
+            if len(subset) == 0:
+                try:
+                    # G_pos = matrix(sparse([G, matrix(-np.eye(n), tc='d')]))
+                    # h_pos = matrix(sparse([h, matrix(np.zeros((n, 1)))]))
+                    sol = solvers.qp(mx_P, mx_q, G, h, mx_A, mx_b)
+                    if sol['x'] == 'unknown':
+                        print('failed to get optimal value on\
+                        position limit constraint')
+                except ValueError as e:
+                    raise ConstraintError('ERROR on solving position limit\
+                    constraint only')
+
+            if len(subset) > 0:
+                ls = [x-1 for x in list(subset)]
+                g_matrix = []
+                h_matrix = []
+                g_matrix.append(G)
+                h_matrix.append(h)
+                for i in ls:
+                    g_matrix.append(boundary_sub[i])
+                    h_matrix.append(limit[i])
+
+                G_val = matrix(sparse(g_matrix))
+                h_val = matrix(sparse(h_matrix))
+
+                try:
+                    sol = solvers.qp(mx_P, mx_q, G_val, h_val, mx_A, mx_b)
+                    if sol['x'] == 'unknown':
+                        print('failed to get optimal value on %s', [error[i] for i in ls])
+                except ValueError as e:
+                    raise ConstraintError('ERROR on solving combination %s, %s' % ([error[i] for i in ls], e))
+
+
 def statistics(weights, rets, covariance):
     """Compute expected portfolio statistics from individual asset returns.
 
@@ -448,7 +523,18 @@ def CVXOptimizerBnd(context, target_mode, position_limit, risk_model,
     elif target_mode == 1:
 
         (f_min, f_max) = get_ret_range(asset_return, df_asset_weight)
-        if target_return < f_min or target_return > f_max:
+        unsorted_level_0_value = idx_level_0_value.drop_duplicates()
+        df_hi_asset_return = pd.DataFrame(asset_return.loc[:, idx_level_1_value],
+                                          columns=df_pivot_industries_asset_weights.columns,
+                                          index=df_pivot_industries_asset_weights.index)
+        group_rets_min_idx_level_1_value = df_hi_asset_return.mean().sort_values(ascending=True).groupby(level=0).head(1).ix[unsorted_level_0_value].index
+        group_rets_max_idx_level_1_value = df_hi_asset_return.mean().sort_values(ascending=False).groupby(level=0).head(1).ix[unsorted_level_0_value].index
+        f_group_rets_min = get_ret_range(asset_return.loc[:, group_rets_min_idx_level_1_value], df_group_weight)[0]
+        f_group_rets_max = get_ret_range(asset_return.loc[:, group_rets_max_idx_level_1_value], df_group_weight)[0]
+
+        if target_return < f_min or target_return > f_max or\
+           target_return < f_group_rets_min or\
+           target_return > f_group_rets_max:
             raise ValueError("target return not possible")
         if exposure_constraint is not None:
             G = matrix(sparse([G, asset_sub, Group_sub, exp_sub]))
