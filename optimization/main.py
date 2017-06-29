@@ -51,7 +51,8 @@ def get_ret_range(rets, df_asset_bound):
 
     rets = deepcopy(rets)
 
-    na_expected = np.average(rets, axis=0)
+#    na_expected = np.average(rets, axis=0)
+    na_expected = logrels(rets).mean().values
 
     na_signs = np.sign(na_expected)
     indices = np.where(na_signs == 0)
@@ -262,14 +263,14 @@ def statistics(weights, rets, covariance):
         weights = np.array(weights)
 
     if isinstance(weights, matrix):
-        pret = np.sum(logrels(rets.values).mean() * weights)
+        pret = np.sum(logrels(rets).mean().values * weights.T)
         pvol = np.dot(weights.T, np.dot(covariance, weights))
     elif isinstance(weights, pd.DataFrame):
-        pret = np.dot(weights.values, logrels(rets).mean())
+        pret = np.dot(weights.values, logrels(rets).mean().T)
         pvol = np.dot(weights, np.dot(covariance, weights.T))
-    pstd = np.sqrt(pvol)
+    # pstd = np.sqrt(pvol)
 
-    return [pret, pvol, pret/pstd]
+    return [pret, pvol, pret/pvol]
 
 
 def get_factor_exposure(risk_model, factor_list, date, symbols):
@@ -577,6 +578,7 @@ def CVXOptimizerBnd(context, target_mode, position_limit, risk_model,
         ls_f_return = [f_min + x * f_step for x in range(101)]
         ls_f_risk = []
         ls_portfolio = []
+        ls_f_result = []
         for i, f_target_return in enumerate(ls_f_return):
             logger.debug('target return: %s %s', i, f_target_return)
             h = matrix(-np.ones((1, 1))*f_target_return)
@@ -596,6 +598,10 @@ def CVXOptimizerBnd(context, target_mode, position_limit, risk_model,
                 ls_f_risk.append(np.nan)
                 ls_portfolio.append(None)
                 continue
+            f_result = statistics(sol['x'], asset_return, cov_matrix_V)
+            ls_f_result.append(f_result)
+            logger.debug('target result calculated from weight: %s', f_result)
+
             ls_f_risk.append(statistics(sol['x'], asset_return, cov_matrix_V)[1])
             df_opts_weight = pd.DataFrame(np.array(sol['x']).T,
                                           columns=target_symbols,
@@ -633,6 +639,7 @@ def CVXOptimizerBnd(context, target_mode, position_limit, risk_model,
         df_opts_weight = pd.DataFrame(np.array(sol['x']).T,
                                       columns=target_symbols,
                                       index=[target_date])
+
     if sol['status'] == 'optimal':
         logger.debug('result is optimal')
     elif sol['status'] == 'unknown':
