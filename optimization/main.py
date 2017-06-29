@@ -502,7 +502,7 @@ def CVXOptimizerBnd(context, target_mode, position_limit, risk_model,
             df_factor_exposure_bound.upper.ix[exposure_constraint.upper.index] = exposure_constraint.upper
         except KeyError:
             raise('input target factor is not possible.')
-        
+
     if check_boundary_constraint(df_asset_weight, df_group_weight,
                                  df_factor_exposure_bound, big_X):
         logger.debug("boundary setting is fine")
@@ -544,7 +544,10 @@ def CVXOptimizerBnd(context, target_mode, position_limit, risk_model,
             G = matrix(sparse([asset_sub, Group_sub]))
             h = matrix(sparse([df_asset_bnd_matrix, df_group_bnd_matrix]))
 
-        sol = solvers.qp(P, q, G, h, A, b)
+        try:
+            sol = solvers.qp(P, q, G, h, A, b)
+        except ValueError:
+            raise("solution is not possible on constraint")
         df_opts_weight = pd.DataFrame(np.array(sol['x']).T,
                                       columns=target_symbols,
                                       index=[target_date])
@@ -574,7 +577,7 @@ def CVXOptimizerBnd(context, target_mode, position_limit, risk_model,
             h1 = matrix(sparse([h, df_asset_bnd_matrix, df_group_bnd_matrix]))
         try:
             sol = solvers.qp(P, q, G1, h1, A, b)
-        except:
+        except ValueError:
             #check_constraint_issue
             logger.info("domain error: %s", sol['x'])
 
@@ -584,7 +587,7 @@ def CVXOptimizerBnd(context, target_mode, position_limit, risk_model,
     # Computes a tangency portfolio, i.e. a maximum Sharpe ratio portfolio
     elif target_mode == 2:
         (f_min, f_max) = get_ret_range(asset_return, df_asset_weight)
-        N = 20
+        N = 100
         f_step = (f_max - f_min) / N
         ls_f_return = [f_min + x * f_step for x in range(N + 1)]
         ls_f_risk = []
@@ -605,7 +608,7 @@ def CVXOptimizerBnd(context, target_mode, position_limit, risk_model,
             try:
                 sol = solvers.qp(P, q, G_sr, h_sr, A, b)
                 logger.debug("solution is: %s", sol['status'])
-            except:
+            except ValueError:
                 ls_f_risk.append(np.nan)
                 ls_portfolio.append(None)
                 continue
