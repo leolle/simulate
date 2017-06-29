@@ -268,9 +268,9 @@ def statistics(weights, rets, covariance):
     elif isinstance(weights, pd.DataFrame):
         pret = np.dot(weights.values, logrels(rets).mean().T)
         pvol = np.dot(weights, np.dot(covariance, weights.T))
-    # pstd = np.sqrt(pvol)
+    pstd = np.sqrt(pvol)
 
-    return [pret, pvol, pret/pvol]
+    return [pret, pvol, pret/pstd]
 
 
 def get_factor_exposure(risk_model, factor_list, date, symbols):
@@ -484,15 +484,25 @@ def CVXOptimizerBnd(context, target_mode, position_limit, risk_model,
     df_factor_exposure_bound.upper = (1.0/noa)*big_X.sum()*(1.000009)
 
     if asset_constraint is not None:
-        df_asset_weight.lower.ix[asset_constraint.lower.index] = asset_constraint.lower
-        df_asset_weight.upper.ix[asset_constraint.upper.index] = asset_constraint.upper
+        try:
+            df_asset_weight.lower.ix[asset_constraint.lower.index] = asset_constraint.lower
+            df_asset_weight.upper.ix[asset_constraint.upper.index] = asset_constraint.upper
+        except KeyError:
+            raise('input target asset is not in the initial asset.')
     if group_constraint is not None:
-        df_group_weight.lower.ix[group_constraint.lower.index] = group_constraint.lower
-        df_group_weight.upper.ix[group_constraint.upper.index] = group_constraint.upper
-    if exposure_constraint is not None:
-        df_factor_exposure_bound.lower.ix[exposure_constraint.lower.index] = exposure_constraint.lower
-        df_factor_exposure_bound.upper.ix[exposure_constraint.upper.index] = exposure_constraint.upper
+        try:
+            df_group_weight.lower.ix[group_constraint.lower.index] = group_constraint.lower
+            df_group_weight.upper.ix[group_constraint.upper.index] = group_constraint.upper
+        except KeyError:
+            raise('input target group is not in the initial group.')
 
+    if exposure_constraint is not None:
+        try:
+            df_factor_exposure_bound.lower.ix[exposure_constraint.lower.index] = exposure_constraint.lower
+            df_factor_exposure_bound.upper.ix[exposure_constraint.upper.index] = exposure_constraint.upper
+        except KeyError:
+            raise('input target factor is not possible.')
+        
     if check_boundary_constraint(df_asset_weight, df_group_weight,
                                  df_factor_exposure_bound, big_X):
         logger.debug("boundary setting is fine")
@@ -574,8 +584,9 @@ def CVXOptimizerBnd(context, target_mode, position_limit, risk_model,
     # Computes a tangency portfolio, i.e. a maximum Sharpe ratio portfolio
     elif target_mode == 2:
         (f_min, f_max) = get_ret_range(asset_return, df_asset_weight)
-        f_step = (f_max - f_min) / 100
-        ls_f_return = [f_min + x * f_step for x in range(101)]
+        N = 20
+        f_step = (f_max - f_min) / N
+        ls_f_return = [f_min + x * f_step for x in range(N + 1)]
         ls_f_risk = []
         ls_portfolio = []
         ls_f_result = []
@@ -608,14 +619,13 @@ def CVXOptimizerBnd(context, target_mode, position_limit, risk_model,
                                           index=[target_date])
             ls_portfolio.append(df_opts_weight)
 
-        #f_return = ls_f_return[ls_f_risk.index(min(ls_f_risk))]
         ls_f_return_new = np.array(ls_f_return)
         ls_f_risk_new = np.array(ls_f_risk)
         ls_f_risk_new = ls_f_risk_new[ls_f_risk_new <= target_risk]
         if len(ls_f_risk_new) == 0:
             raise ValueError("target risk is not possible")
         ls_f_return_new = ls_f_return_new[ls_f_risk_new <= target_risk]
-        na_sharpe_ratio = ls_f_return_new / ls_f_risk_new
+        na_sharpe_ratio = np.array(ls_f_result)[:, 2]
         logger.debug("maximum sharpe ratio is: %s", max(na_sharpe_ratio))
         i_index_max_sharpe = np.where(na_sharpe_ratio == max(na_sharpe_ratio))
         i_index_max_sharpe = i_index_max_sharpe[0]
@@ -640,9 +650,9 @@ def CVXOptimizerBnd(context, target_mode, position_limit, risk_model,
                                       columns=target_symbols,
                                       index=[target_date])
 
-    if sol['status'] == 'optimal':
-        logger.debug('result is optimal')
-    elif sol['status'] == 'unknown':
-        logger.warn('Convergence problem, the algorithm failed to find a solution that satisfies the specified tolerances')
+    # if sol['status'] == 'optimal':
+    #     logger.debug('result is optimal')
+    # elif sol['status'] == 'unknown':
+    #     logger.warn('Convergence problem, the algorithm failed to find a solution that satisfies the specified tolerances')
 
     return df_opts_weight

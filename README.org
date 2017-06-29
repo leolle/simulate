@@ -45,9 +45,12 @@ CLOSED: [2017-06-27 Tue 09:58]
 CLOSED: [2017-06-27 Tue 15:18]
 ** DONE calculate theoretical min and max theoretical returns from group constraint.
 CLOSED: [2017-06-28 Wed 14:32]
-** TODO compare portfolio between maximum sharpe ratio portfolio and Mean-Variance portfolio.
+** DONE compare portfolio between maximum sharpe ratio portfolio and Mean-Variance portfolio.
+CLOSED: [2017-06-29 Thu 14:12]
+maximum sharpe ratio portfolio is compatible with weight and exposure constraint.
 ** change modifying default constraint value.
-** TODO what if input asset, group, exposure constraint symbols are not in the risk model?
+** DONE what if input asset, group, exposure constraint symbols are not in the risk model?
+CLOSED: [2017-06-29 Thu 14:51]
 ** add loss function objective.
 like minimum risk, max return, max sharpe ratio etc.
 ** add transaction cost.
