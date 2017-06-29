@@ -6,7 +6,6 @@ import os
 import warnings
 from cvxopt import matrix, solvers, spmatrix, sparse
 from cvxopt.blas import dot
-import logging
 
 from lib.gftTools import gftIO
 
@@ -359,13 +358,9 @@ def CVXOptimizerBnd(context, target_mode, position_limit, risk_model,
         Columns: assets names.
 
     """
+    import logging
     logger = logging.getLogger()
     handler = logging.StreamHandler()
-    # create file handler
-    log_path = "~/work/log.log"
-    fh = logging.FileHandler(log_path)
-    fh.setLevel(logging.DEBUG)
-
     formatter = logging.Formatter('%(asctime)s %(name)-12s %(levelname)-8s %(message)s')
     handler.setFormatter(formatter)
     logger.addHandler(handler)
@@ -382,6 +377,9 @@ def CVXOptimizerBnd(context, target_mode, position_limit, risk_model,
         exposure_constaint = exposure_constraint.asMatrix()
 
     logger.debug('parse data finished!')
+    logger.debug('asset return number: %s', asset_return.shape[1])
+    logger.debug('asset weight number: %s', asset_weights.shape[1])
+    logger.debug('parse data finished.')
     # regex to search all the factors
     ls_factor = [x[:-4] for x in risk_model.keys() if re.search(".ret$", x)]
     # ls_factor = [x.split('.')[0] for x in ls_factor]
@@ -398,7 +396,8 @@ def CVXOptimizerBnd(context, target_mode, position_limit, risk_model,
     dt_next_to_target = specific_risk.index.searchsorted(target_date)
     dt_next_to_target = specific_risk.index[dt_next_to_target]
     target_specific_risk = specific_risk.loc[dt_next_to_target, :]
-
+    logger.debug('target date: %s', target_date)
+    logger.debug('next to target date: %s', dt_next_to_target)
     # drop duplicated rows at date
     df_industries_asset_weight = asset_weights.drop_duplicates(
         subset=['date', 'symbol'])
@@ -415,7 +414,7 @@ def CVXOptimizerBnd(context, target_mode, position_limit, risk_model,
     unique_symbol = df_industries_asset_init_weight['symbol'].unique()
     target_symbols = target_specific_risk.index.intersection(unique_symbol)
     if position_limit > len(target_symbols):
-        print("position limit is bigger than total symbols")
+        logger.debug("position limit is bigger than total symbols.")
         position_limit = len(target_symbols)
 
     # get random symbols at the target position limit
@@ -429,7 +428,7 @@ def CVXOptimizerBnd(context, target_mode, position_limit, risk_model,
         df_industries_asset_target_init_weight, values='value', index=['date'],
         columns=['industry', 'symbol'])
     df_pivot_industries_asset_weights = df_pivot_industries_asset_weights.fillna(0)
-
+    logger.debug("set OOTV to hierachical index dataframe.")
     noa = len(target_symbols)
     if noa < 1:
         raise ValueError("no intersected symbols from specific risk and initial holding.")
@@ -470,6 +469,9 @@ def CVXOptimizerBnd(context, target_mode, position_limit, risk_model,
     num_group = len(groups)
     num_asset = np.sum(groups)
 
+    logger.debug('number of assets in groups: %s', num_asset)
+    logger.debug('number of groups: %s', num_group)
+
 
     # set boundary vector for h
     df_asset_weight = pd.DataFrame({'lower': [0.0], 'upper': [1.0]},
@@ -492,7 +494,7 @@ def CVXOptimizerBnd(context, target_mode, position_limit, risk_model,
 
     if check_boundary_constraint(df_asset_weight, df_group_weight,
                                  df_factor_exposure_bound, big_X):
-        print("boundary setting is fine")
+        logger.debug("boundary setting is fine")
 
     df_asset_bnd_matrix = matrix(np.concatenate(((df_asset_weight.upper,
                                                   df_asset_weight.lower)), 0))
@@ -562,7 +564,8 @@ def CVXOptimizerBnd(context, target_mode, position_limit, risk_model,
         try:
             sol = solvers.qp(P, q, G1, h1, A, b)
         except:
-            check_constraint_issue
+            #check_constraint_issue
+            logger.info("domain error: %s", sol['x'])
 
         df_opts_weight = pd.DataFrame(np.array(sol['x']).T,
                                       columns=target_symbols,
@@ -574,7 +577,8 @@ def CVXOptimizerBnd(context, target_mode, position_limit, risk_model,
         ls_f_return = [f_min + x * f_step for x in range(101)]
         ls_f_risk = []
         ls_portfolio = []
-        for f_target_return in ls_f_return:
+        for i, f_target_return in enumerate(ls_f_return):
+            logger.debug('target return: %s %s', i, f_target_return)
             h = matrix(-np.ones((1, 1))*f_target_return)
             if exposure_constraint is not None:
                 G_sr = matrix(sparse([G, asset_sub, Group_sub, exp_sub]))
@@ -587,6 +591,7 @@ def CVXOptimizerBnd(context, target_mode, position_limit, risk_model,
                                       df_group_bnd_matrix]))
             try:
                 sol = solvers.qp(P, q, G_sr, h_sr, A, b)
+                logger.debug("solution is: %s", sol['status'])
             except:
                 ls_f_risk.append(np.nan)
                 ls_portfolio.append(None)
@@ -605,10 +610,15 @@ def CVXOptimizerBnd(context, target_mode, position_limit, risk_model,
             raise ValueError("target risk is not possible")
         ls_f_return_new = ls_f_return_new[ls_f_risk_new <= target_risk]
         na_sharpe_ratio = ls_f_return_new / ls_f_risk_new
+        logger.debug("maximum sharpe ratio is: %s", max(na_sharpe_ratio))
         i_index_max_sharpe = np.where(na_sharpe_ratio == max(na_sharpe_ratio))
         i_index_max_sharpe = i_index_max_sharpe[0]
         f_target = ls_f_return_new[i_index_max_sharpe]
         h = matrix(-np.ones((1, 1))*f_target)
+        logger.debug("maximum sharpe ratio index is: %s", i_index_max_sharpe)
+        logger.debug("maximum sharpe ratio return is: %s", f_target)
+        logger.debug("maximum sharpe ratio risk is: %s", ls_f_risk_new[i_index_max_sharpe])
+
         if exposure_constraint is not None:
             G_sr = matrix(sparse([G, asset_sub, Group_sub, exp_sub]))
             h_sr = matrix(sparse([h, df_asset_bnd_matrix,
@@ -619,14 +629,13 @@ def CVXOptimizerBnd(context, target_mode, position_limit, risk_model,
             h_sr = matrix(sparse([h, df_asset_bnd_matrix,
                                   df_group_bnd_matrix]))
         sol = solvers.qp(P, q, G_sr, h_sr, A, b)
+        logger.debug("maximum sharpe ratio solution is %s", sol['status'])
         df_opts_weight = pd.DataFrame(np.array(sol['x']).T,
                                       columns=target_symbols,
                                       index=[target_date])
     if sol['status'] == 'optimal':
-        print('result is optimal')
+        logger.debug('result is optimal')
     elif sol['status'] == 'unknown':
-        warnings.warn('Convergence problem, the algorithm failed to find a solution that satisfies the specified tolerances')
+        logger.warn('Convergence problem, the algorithm failed to find a solution that satisfies the specified tolerances')
 
     return df_opts_weight
-
-
