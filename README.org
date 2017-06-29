@@ -12,6 +12,13 @@
 #+CREATOR: Emacs 24.5.1 (Org mode 8.3.4)
 
 
+* utilities
+
+** export file
+#+BEGIN_SRC shell
+!cp /home/gft/data/x0.pkl ~/work/
+
+#+END_SRC
 * optimization:
 ** DONE position limit
 CLOSED: [2017-06-23 Fri 14:46]
@@ -40,6 +47,7 @@ CLOSED: [2017-06-27 Tue 15:18]
 CLOSED: [2017-06-28 Wed 14:32]
 ** TODO compare portfolio between maximum sharpe ratio portfolio and Mean-Variance portfolio.
 ** change modifying default constraint value.
+** TODO what if input asset, group, exposure constraint symbols are not in the risk model?
 ** add loss function objective.
 like minimum risk, max return, max sharpe ratio etc.
 ** add transaction cost.

@@ -6,6 +6,7 @@ import os
 import warnings
 from cvxopt import matrix, solvers, spmatrix, sparse
 from cvxopt.blas import dot
+import logging
 
 from lib.gftTools import gftIO
 
@@ -166,7 +167,8 @@ class ConstraintError(Exception):
     pass
 
 
-def check_constraint_issue(mx_P, mx_q, mx_G, mx_h, mx_A, mx_b, mx_asset_sub, mx_group_sub, mx_exp_sub,
+def check_constraint_issue(mx_P, mx_q, mx_G, mx_h, mx_A, mx_b,
+                           mx_asset_sub, mx_group_sub, mx_exp_sub,
                            mx_asset_bnd, mx_group_bnd, mx_exp_bnd):
     ''' check which constraint fails.
 
@@ -176,11 +178,11 @@ def check_constraint_issue(mx_P, mx_q, mx_G, mx_h, mx_A, mx_b, mx_asset_sub, mx_
         matrix only includes returns.
     mx_h: 1x1 matrix
         target return matrix.
-    mx_asset_sub: 2nxn matrix, n=asset number
+    mx_asset_sub: 2nxn subsets matrix, n=asset number
         2 nx1 identity matrices.
-    mx_group_sub: 2axn matrix, a=group number
+    mx_group_sub: 2axn subsets matrix, a=group number
         2 axn spmatrices.
-    mx_exp_sub: 2bxn matrix, b=exposure factors number
+    mx_exp_sub: 2bxn subsets matrix, b=exposure factors number
         2bxn identity matrices.
     mx_asset_bnd: 2nx1 matrix, n=asset number
         asset weight constraint matrix
@@ -236,6 +238,7 @@ def check_constraint_issue(mx_P, mx_q, mx_G, mx_h, mx_A, mx_b, mx_asset_sub, mx_
                 except ValueError as e:
                     raise ConstraintError('ERROR on solving combination %s, %s' % ([error[i] for i in ls], e))
 
+    return True
 
 def statistics(weights, rets, covariance):
     """Compute expected portfolio statistics from individual asset returns.
@@ -356,6 +359,18 @@ def CVXOptimizerBnd(context, target_mode, position_limit, risk_model,
         Columns: assets names.
 
     """
+    logger = logging.getLogger()
+    handler = logging.StreamHandler()
+    # create file handler
+    log_path = "~/work/log.log"
+    fh = logging.FileHandler(log_path)
+    fh.setLevel(logging.DEBUG)
+
+    formatter = logging.Formatter('%(asctime)s %(name)-12s %(levelname)-8s %(message)s')
+    handler.setFormatter(formatter)
+    logger.addHandler(handler)
+    logger.setLevel(logging.DEBUG)
+
     asset_return = asset_return.asMatrix()
     asset_weights = asset_weight.asColumnTab()
     target_date = pd.to_datetime(target_date)
@@ -366,6 +381,7 @@ def CVXOptimizerBnd(context, target_mode, position_limit, risk_model,
     if exposure_constraint is not None:
         exposure_constaint = exposure_constraint.asMatrix()
 
+    logger.debug('parse data finished!')
     # regex to search all the factors
     ls_factor = [x[:-4] for x in risk_model.keys() if re.search(".ret$", x)]
     # ls_factor = [x.split('.')[0] for x in ls_factor]
@@ -530,20 +546,24 @@ def CVXOptimizerBnd(context, target_mode, position_limit, risk_model,
         group_rets_min_idx_level_1_value = df_hi_asset_return.mean().sort_values(ascending=True).groupby(level=0).head(1).ix[unsorted_level_0_value].index
         group_rets_max_idx_level_1_value = df_hi_asset_return.mean().sort_values(ascending=False).groupby(level=0).head(1).ix[unsorted_level_0_value].index
         f_group_rets_min = get_ret_range(asset_return.loc[:, group_rets_min_idx_level_1_value], df_group_weight)[0]
-        f_group_rets_max = get_ret_range(asset_return.loc[:, group_rets_max_idx_level_1_value], df_group_weight)[0]
+        f_group_rets_max = get_ret_range(asset_return.loc[:, group_rets_max_idx_level_1_value], df_group_weight)[1]
 
         if target_return < f_min or target_return > f_max or\
            target_return < f_group_rets_min or\
            target_return > f_group_rets_max:
             raise ValueError("target return not possible")
         if exposure_constraint is not None:
-            G = matrix(sparse([G, asset_sub, Group_sub, exp_sub]))
-            h = matrix(sparse([h, df_asset_bnd_matrix, df_group_bnd_matrix,
+            G1 = matrix(sparse([G, asset_sub, Group_sub, exp_sub]))
+            h1 = matrix(sparse([h, df_asset_bnd_matrix, df_group_bnd_matrix,
                                df_factor_exposure_bnd_matrix]))
         else:
-            G = matrix(sparse([G, asset_sub, Group_sub]))
-            h = matrix(sparse([h, df_asset_bnd_matrix, df_group_bnd_matrix]))
-        sol = solvers.qp(P, q, G, h, A, b)
+            G1 = matrix(sparse([G, asset_sub, Group_sub]))
+            h1 = matrix(sparse([h, df_asset_bnd_matrix, df_group_bnd_matrix]))
+        try:
+            sol = solvers.qp(P, q, G1, h1, A, b)
+        except:
+            check_constraint_issue
+
         df_opts_weight = pd.DataFrame(np.array(sol['x']).T,
                                       columns=target_symbols,
                                       index=[target_date])
@@ -581,6 +601,8 @@ def CVXOptimizerBnd(context, target_mode, position_limit, risk_model,
         ls_f_return_new = np.array(ls_f_return)
         ls_f_risk_new = np.array(ls_f_risk)
         ls_f_risk_new = ls_f_risk_new[ls_f_risk_new <= target_risk]
+        if len(ls_f_risk_new) == 0:
+            raise ValueError("target risk is not possible")
         ls_f_return_new = ls_f_return_new[ls_f_risk_new <= target_risk]
         na_sharpe_ratio = ls_f_return_new / ls_f_risk_new
         i_index_max_sharpe = np.where(na_sharpe_ratio == max(na_sharpe_ratio))
