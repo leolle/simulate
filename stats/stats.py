@@ -534,12 +534,14 @@ def holding_dispersion_std(df_holding, df_market_price, period=gsConst.Const.DAI
         Historical holding of the strategy.
     df_market_price: pd.DataFrame
         Historical market close price from 1990.
-        
+
     Returns
     -------
     float
         standard deviation.
     """
+    if len(df_holding) < 1:
+        return np.nan
     date_range = df_holding.index
     
     df_holding_value = (df_holding * df_market_price.ix[date_range])
@@ -572,11 +574,26 @@ def PNLFitness(df_single_period_return, f_risk_free_rate, benchmark_ret, holding
     result, dictionary
         fitness of returns.
     """
-    df_single_period_return = df_single_period_return.asMatrix()
-    benchmark_ret = benchmark_ret.asMatrix()
-    holding = holding.asMatrix()
-    closing_price = closing_price.asMatrix()
-    market_capital = market_capital.asMatrix()
+    try:
+        df_single_period_return = df_single_period_return.asMatrix()
+    except AttributeError:
+        df_single_period_return = None
+    try:
+        benchmark_ret = benchmark_ret.asMatrix()
+    except AttributeError:
+        benchmark_ret = None
+    try:
+        holding = holding.asMatrix()
+    except AttributeError:
+        holding = None
+    try:
+        closing_price = closing_price.asMatrix()
+    except AttributeError:
+        closing_price = None
+    try:
+        market_capital = market_capital.asMatrix()
+    except AttributeError:
+        market_capital = None
 
     dt_diff = df_single_period_return.index.to_series().diff().mean()
     if dt_diff < pd.Timedelta('3 days'):
@@ -599,15 +616,15 @@ def PNLFitness(df_single_period_return, f_risk_free_rate, benchmark_ret, holding
     result[gsConst.Const.SharpeRatio] = sharpe_ratio(df_single_period_return, f_risk_free_rate)
     result[gsConst.Const.SortinoRatio] = sortino_ratio(df_single_period_return,f_risk_free_rate)
     result[gsConst.Const.TotalTradingDays] = int_trading_days(df_single_period_return)
-    result[gsConst.Const.MaxHoldingNum] = max_holding_num(holding)
-    result[gsConst.Const.MinHoldingNum] = min_holding_num(holding)
-    result[gsConst.Const.AverageHoldingNum] = average_holding_num(holding)
-    result[gsConst.Const.LatestHoldingNum] = latest_holding_num(holding)
-    result[gsConst.Const.AverageHoldingNum] = average_holding_num(holding)
-    result[gsConst.Const.AverageHoldingNumPercentage] = average_holding_num_percentage(holding, market_capital)
-    result[gsConst.Const.LatestHoldingNumPercentage] = latest_holding_num_percentage(holding, market_capital)
+    if len(holding) > 1:
+        result[gsConst.Const.MaxHoldingNum] = max_holding_num(holding)
+        result[gsConst.Const.MinHoldingNum] = min_holding_num(holding)
+        result[gsConst.Const.AverageHoldingNum] = average_holding_num(holding)
+        result[gsConst.Const.LatestHoldingNum] = latest_holding_num(holding)
+        result[gsConst.Const.AverageHoldingNum] = average_holding_num(holding)
+        result[gsConst.Const.AverageHoldingNumPercentage] = average_holding_num_percentage(holding, market_capital)
+        result[gsConst.Const.LatestHoldingNumPercentage] = latest_holding_num_percentage(holding, market_capital)
 
-    
     if len(benchmark_ret)>1:
         result[gsConst.Const.BenchmarkAnnualReturn] = annual_return(benchmark_ret, period=periods)
         result[gsConst.Const.BenchmarkSharpeRatio] = sharpe_ratio(benchmark_ret, f_risk_free_rate)
@@ -615,9 +632,10 @@ def PNLFitness(df_single_period_return, f_risk_free_rate, benchmark_ret, holding
         result[gsConst.Const.BenchmarStdReturn] = return_std(benchmark_ret)
         result[gsConst.Const.BenchmarkMaxDrawdownRate] = cal_max_dd(benchmark_ret)
         result[gsConst.Const.BenchmarkCumulativeReturn] = cum_returns(benchmark_ret)
-        result[gsConst.Const.PortfolioValueMarketCapitalRatio] = portfolio_market_ratio(holding, closing_price, market_capital)
         result[gsConst.Const.ExcessAnnualReturn] = excess_return(df_single_period_return, benchmark_ret)
-        
+       if len(holding) > 1:
+            result[gsConst.Const.PortfolioValueMarketCapitalRatio] = portfolio_market_ratio(holding, closing_price, market_capital)
+
     return result
 # if __name__ == '__main__':
 #     data = [100, 101, 100, 101, 102, 103, 104, 105, 106, 107]
