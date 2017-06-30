@@ -313,7 +313,8 @@ def find_nearest(array, value):
 def CVXOptimizerBnd(context, target_mode, position_limit, risk_model,
                     asset_return, asset_weight, target_risk,
                     target_return, target_date, asset_constraint,
-                    group_constraint, exposure_constraint):
+                    group_constraint, exposure_constraint,
+                    lambda_risk,beta_tranaction,alpha_return):
     """
     optimize fund weight target on different constraints, objective, based on
     target type and mode, fund return target, fund weight, group weight， etc.
@@ -382,6 +383,9 @@ def CVXOptimizerBnd(context, target_mode, position_limit, risk_model,
     asset_return = asset_return.asMatrix()
     asset_weights = asset_weight.asColumnTab()
     target_date = pd.to_datetime(target_date)
+    target_return = target_return * alpha_return
+    target_risk = target_risk * lambda_risk
+    
     if asset_constraint is not None:
         asset_constraint = asset_constraint.asMatrix()
     if group_constraint is not None:

@@ -465,7 +465,7 @@ def excess_return(df_single_return, benchmark_ret):
     if len(df_single_return) < 1:
         return np.nan
 
-    ex_ret = annual_return(df_single_return) - annual_return(benchmark_ret)
+    ex_ret = annual_return((df_single_return - benchmark_ret).dropna())
 
     return ex_ret
 
@@ -577,7 +577,7 @@ def PNLFitness(df_single_period_return, f_risk_free_rate, benchmark_ret, holding
     holding = holding.asMatrix()
     closing_price = closing_price.asMatrix()
     market_capital = market_capital.asMatrix()
-    
+
     dt_diff = df_single_period_return.index.to_series().diff().mean()
     if dt_diff < pd.Timedelta('3 days'):
         periods = gsConst.Const.DAILY
@@ -585,7 +585,7 @@ def PNLFitness(df_single_period_return, f_risk_free_rate, benchmark_ret, holding
         periods = gsConst.Const.WEEKLY
     else:
         periods = gsConst.Const.MONTHLY
-        
+
     result = {}
     result[gsConst.Const.AnnualReturn] = annual_return(df_single_period_return, period=periods)
     result[gsConst.Const.AnnualVolatility] = annual_volatility(df_single_period_return, period=periods)
