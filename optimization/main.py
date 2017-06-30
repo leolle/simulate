@@ -196,7 +196,6 @@ def check_constraint_issue(mx_P, mx_q, mx_G, mx_h, mx_A, mx_b,
     None
     '''
     import itertools
-    raise ValueError('short is not supported.')
     G = matrix(sparse([mx_G, mx_asset_sub]))
     h = matrix(sparse([mx_h, mx_asset_bnd]))
 
@@ -212,7 +211,7 @@ def check_constraint_issue(mx_P, mx_q, mx_G, mx_h, mx_A, mx_b,
                     # h_pos = matrix(sparse([h, matrix(np.zeros((n, 1)))]))
                     sol = solvers.qp(mx_P, mx_q, G, h, mx_A, mx_b)
                     if sol['x'] == 'unknown':
-                        print('failed to get optimal value on\
+                        raise('failed to get optimal value on\
                         position limit constraint')
                 except ValueError as e:
                     raise ConstraintError('ERROR on solving position limit\
@@ -321,18 +320,14 @@ def CVXOptimizerBnd(context, target_mode, position_limit, risk_model,
 
     Parameters
     ----------
-    target_date: Timestamp
-        Specific date.
-
-    target_mode: dictionary
-        target optimization type({type: mode})
+    target_mode: int
+        target optimization type
         0: minimum risk.
         1: minimum risk subject to target return.
-        2: maximum return subject to target risk.
+        2: maximum sharpe ratio subject to target risk.
 
-    asset_return: Dataframe, OTV,
-        asset return for all symbols.
-        index=date, O: asset names, V: asset return.
+    position_limit: int
+        maximum position number selected.
 
     risk model: dictionary
         Risk factor exposure: DataFrame
@@ -340,6 +335,10 @@ def CVXOptimizerBnd(context, target_mode, position_limit, risk_model,
             得把所有8个因子某一天所有值先取出来得到一个n*k的矩阵.n为股票，k为因子
         Specific Risk: DataFrame
             用来组成对角矩阵Delta.
+
+    asset_return: Dataframe, OTV,
+        asset return for all symbols.
+        index=date, O: asset names, V: asset return.
 
     asset_weight: Dataframe, OOTV
         T=date, O: asset names, O: group names, V: asset weight.
@@ -350,6 +349,19 @@ def CVXOptimizerBnd(context, target_mode, position_limit, risk_model,
 
     target_risk: double
         Portfolio risk tolerance whose objective is maximum return.
+
+    target_date: Timestamp
+        Specific date.
+
+    asset_constraint: OVV
+        input asset constraint, V1: lower boundary, V2: upper boundary.
+
+    group constraint: OVV
+        input group constraint, V1: lower boundary, V2: upper boundary.
+
+    exposure constraint: OVV
+        input factor exposure constraint, V1: lower boundary, V2: upper boundary.
+
 
     Returns:
     ----------
@@ -413,7 +425,9 @@ def CVXOptimizerBnd(context, target_mode, position_limit, risk_model,
         axis=0, subset=['industry', 'symbol'], how='any')
 
     unique_symbol = df_industries_asset_init_weight['symbol'].unique()
-    target_symbols = target_specific_risk.index.intersection(unique_symbol)
+    target_symbols = target_specific_risk.index.\
+                     intersection(asset_return.columns.\
+                                  intersection(unique_symbol))
     if position_limit > len(target_symbols):
         logger.debug("position limit is bigger than total symbols.")
         position_limit = len(target_symbols)
@@ -436,6 +450,7 @@ def CVXOptimizerBnd(context, target_mode, position_limit, risk_model,
 
     # get the ordered column list
     idx_level_0_value = df_pivot_industries_asset_weights.columns.get_level_values(0)
+    idx_level_0_value = idx_level_0_value.drop_duplicates()
     idx_level_1_value = df_pivot_industries_asset_weights.columns.get_level_values(1)
     asset_return = asset_return.loc[:target_date, idx_level_1_value].fillna(0)
 
@@ -478,7 +493,7 @@ def CVXOptimizerBnd(context, target_mode, position_limit, risk_model,
     df_asset_weight = pd.DataFrame({'lower': [0.0], 'upper': [1.0]},
                                    index=idx_level_1_value)
     df_group_weight = pd.DataFrame({'lower': [0.0], 'upper': [1.0]},
-                                   index=set(idx_level_0_value))
+                                   index=idx_level_0_value)
     df_factor_exposure_bound = pd.DataFrame(index=big_X.T.index, columns=[['lower', 'upper']])
     df_factor_exposure_bound.lower = (1.0/noa)*big_X.sum()*(0.999991)
     df_factor_exposure_bound.upper = (1.0/noa)*big_X.sum()*(1.000009)
@@ -537,32 +552,41 @@ def CVXOptimizerBnd(context, target_mode, position_limit, risk_model,
         # G = matrix(-np.eye(noa), tc='d')
         # h = matrix(-np.zeros((noa, 1)), tc='d')
         if exposure_constraint is not None:
-            G = matrix(sparse([asset_sub, Group_sub, exp_sub]))
-            h = matrix(sparse([df_asset_bnd_matrix, df_group_bnd_matrix,
+            G0 = matrix(sparse([asset_sub, Group_sub, exp_sub]))
+            h0 = matrix(sparse([df_asset_bnd_matrix, df_group_bnd_matrix,
                                df_factor_exposure_bnd_matrix]))
         else:
-            G = matrix(sparse([asset_sub, Group_sub]))
-            h = matrix(sparse([df_asset_bnd_matrix, df_group_bnd_matrix]))
+            G0 = matrix(sparse([asset_sub, Group_sub]))
+            h0 = matrix(sparse([df_asset_bnd_matrix, df_group_bnd_matrix]))
 
         try:
-            sol = solvers.qp(P, q, G, h, A, b)
+            sol = solvers.qp(P, q, G0, h0, A, b)
         except ValueError:
-            raise("solution is not possible on constraint")
+            h = matrix(-np.ones((1, 1))*100.0)
+            check_constraint_issue(P, q, G, h, A, b, asset_sub, Group_sub,
+                                   exp_sub, df_asset_bnd_matrix,
+                                   df_group_bnd_matrix,
+                                   df_factor_exposure_bnd_matrix)
+        if sol['status'] == 'unknown':
+            h = matrix(-np.ones((1, 1))*100.0)
+            check_constraint_issue(P, q, G, h, A, b, asset_sub, Group_sub,
+                                   exp_sub, df_asset_bnd_matrix,
+                                   df_group_bnd_matrix,
+                                   df_factor_exposure_bnd_matrix)
         df_opts_weight = pd.DataFrame(np.array(sol['x']).T,
                                       columns=target_symbols,
                                       index=[target_date])
     # minimum risk subject to target return, Markowitz Mean_Variance Portfolio
     elif target_mode == 1:
-
+        idx = pd.IndexSlice
         (f_min, f_max) = get_ret_range(asset_return, df_asset_weight)
-        unsorted_level_0_value = idx_level_0_value.drop_duplicates()
-        df_hi_asset_return = pd.DataFrame(asset_return.loc[:, idx_level_1_value],
-                                          columns=df_pivot_industries_asset_weights.columns,
-                                          index=df_pivot_industries_asset_weights.index)
-        group_rets_min_idx_level_1_value = df_hi_asset_return.mean().sort_values(ascending=True).groupby(level=0).head(1).ix[unsorted_level_0_value].index
-        group_rets_max_idx_level_1_value = df_hi_asset_return.mean().sort_values(ascending=False).groupby(level=0).head(1).ix[unsorted_level_0_value].index
-        f_group_rets_min = get_ret_range(asset_return.loc[:, group_rets_min_idx_level_1_value], df_group_weight)[0]
-        f_group_rets_max = get_ret_range(asset_return.loc[:, group_rets_max_idx_level_1_value], df_group_weight)[1]
+        df_hi_asset_return = pd.DataFrame(columns=df_pivot_industries_asset_weights.columns,
+                                          index=asset_return.index)
+        df_hi_asset_return.loc[:, idx[:, idx_level_1_value]] = asset_return.loc[:, idx_level_1_value].values
+        group_rets_min_idx_level_1_value = df_hi_asset_return.mean().sort_values(ascending=True).groupby(level=0).head(1).ix[idx_level_0_value].index
+        group_rets_max_idx_level_1_value = df_hi_asset_return.mean().sort_values(ascending=False).groupby(level=0).head(1).ix[idx_level_0_value].index
+        f_group_rets_min = get_ret_range(df_hi_asset_return.loc[:, group_rets_min_idx_level_1_value], df_group_weight)[0]
+        f_group_rets_max = get_ret_range(df_hi_asset_return.loc[:, group_rets_max_idx_level_1_value], df_group_weight)[1]
 
         if target_return < f_min or target_return > f_max or\
            target_return < f_group_rets_min or\
@@ -578,8 +602,15 @@ def CVXOptimizerBnd(context, target_mode, position_limit, risk_model,
         try:
             sol = solvers.qp(P, q, G1, h1, A, b)
         except ValueError:
-            #check_constraint_issue
-            logger.info("domain error: %s", sol['x'])
+            check_constraint_issue(P, q, G, h, A, b, asset_sub, Group_sub,
+                                   exp_sub, df_asset_bnd_matrix,
+                                   df_group_bnd_matrix,
+                                   df_factor_exposure_bnd_matrix)
+        if sol['status'] == 'unknown':
+            check_constraint_issue(P, q, G, h, A, b, asset_sub, Group_sub,
+                                   exp_sub, df_asset_bnd_matrix,
+                                   df_group_bnd_matrix,
+                                   df_factor_exposure_bnd_matrix)
 
         df_opts_weight = pd.DataFrame(np.array(sol['x']).T,
                                       columns=target_symbols,

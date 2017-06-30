@@ -19,6 +19,90 @@
 !cp /home/gft/data/x0.pkl ~/work/
 
 #+END_SRC
+
+* 功能：
+** 3种模式：
+1）最小化风险；
+2）在满足输入回报下，最小化风险；
+3）在满足输入风险下，最大化收益。
+
+** 多种限制条件：
+1）个股数量限制；
+2）个股权重限制；
+3）行业权重限制；
+4）风格因子暴露限制。
+当未输入限制条件时，默认权重限制为（0，1），默认风格因子暴露为RISK MODEL计算得到的值上下浮动0.000009。
+
+** 不同的警告提示：
+当输入的限制条件无法使得系统得出目标最优解时，会提示原因，找到何种限制条件无法满足。
+
+* 输入参数：
+    target_mode: int
+        target optimization type
+        0: minimum risk.
+        1: minimum risk subject to target return.
+        2: maximum sharpe ratio subject to target risk.
+
+    position_limit: int
+        maximum position number selected.
+
+    risk model: dictionary
+        Risk factor exposure: DataFrame
+            所有股票在因子上暴露的值，p.s. 如有8个因子，就有8个DataFrame,
+            得把所有8个因子某一天所有值先取出来得到一个n*k的矩阵.n为股票，k为因子
+        Specific Risk: DataFrame
+            用来组成对角矩阵Delta.
+
+    asset_return: Dataframe, OTV,
+        asset return for all symbols.
+        index=date, O: asset names, V: asset return.
+
+    asset_weight: Dataframe, OOTV
+        T=date, O: asset names, O: group names, V: asset weight.
+        weight bound of each asset. Default is equal weight.
+
+    target_return: double
+        Target return for portfolio respected to benchmark.
+
+    target_risk: double
+        Portfolio risk tolerance whose objective is maximum return.
+
+    target_date: Timestamp
+        Specific date.
+
+    asset_constraint: OVV
+        input asset constraint, V1: lower boundary, V2: upper boundary.
+
+    group constraint: OVV
+        input group constraint, V1: lower boundary, V2: upper boundary.
+
+    exposure constraint: OVV
+        input factor exposure constraint, V1: lower boundary, V2: upper boundary.
+
+
+    Returns:
+    ----------
+    df_result: DataFrame
+        Optimized value of weight.
+        Index: target date.
+        Columns: assets names.
+
+* 示例：
+** 最小化风险：
+J GID：
+A42325FC45B9D55C7C05056721AE3A88
+输入设置：
+
+
+输出结果：
+
+** 在满足输入回报下，最小化风险；
+请手动更改设置模式。
+
+** 在满足输入风险下，最大化收益。
+J GID：
+0AB023977FD09C6BE8196C351D41A098
+模式3计算时间大概需要10分钟。
 * optimization:
 ** DONE position limit
 CLOSED: [2017-06-23 Fri 14:46]
@@ -51,7 +135,9 @@ maximum sharpe ratio portfolio is compatible with weight and exposure constraint
 ** change modifying default constraint value.
 ** DONE what if input asset, group, exposure constraint symbols are not in the risk model?
 CLOSED: [2017-06-29 Thu 14:51]
+** TODO select groups bug.
 ** add loss function objective.
 like minimum risk, max return, max sharpe ratio etc.
 ** add transaction cost.
 ** change random selected symbols to ranked symbols.
+** test the constraints.

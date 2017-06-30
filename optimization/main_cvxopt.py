@@ -16,6 +16,16 @@ import numpy as np
 from datetime import datetime
 
 solvers.options['show_progress'] = False
+
+import logging
+logger = logging.getLogger()
+handler = logging.StreamHandler()
+formatter = logging.Formatter('%(asctime)s %(name)-12s %(levelname)-8s %(message)s')
+handler.setFormatter(formatter)
+logger.addHandler(handler)
+logger.setLevel(logging.DEBUG)
+
+
 # solves the QP, where x is the allocation of the portfolio:
 # minimize   x'Px + q'x
 # subject to Gx <= h
@@ -559,8 +569,8 @@ group_rets_min = rets.mean().sort_values(ascending=True).groupby(level=0).head(1
 group_rets_max = rets.mean().sort_values(ascending=False).groupby(level=0).head(1).ix[unsorted_level_0_value].index
 
 
-f_g_min = get_ret_range(group_rets_min, df_group_weight)[0]
-f_g_max = get_ret_range(group_rets_max, df_group_weight)[1]
+f_g_min = get_ret_range(rets.loc[:, group_rets_min], df_group_weight)[0]
+f_g_max = get_ret_range(rets.loc[:, group_rets_max], df_group_weight)[1]
 
 G = matrix(-np.transpose((rets.mean())), (1, n))
 
@@ -610,4 +620,8 @@ def find_nearest(array, value):
 # sol = solvers.qp(P, q, G_sr, h_sr, A, b)
 # df_opts_weight = pd.DataFrame(np.array(sol['x']).T,
 #                               columns=symbols)
+
+logger.debug("all weight are bigger than 0? %s", (df_opts_weight>0).all().all())
+logger.debug("all weight are smaller than 1? %s", (df_opts_weight<=1).all().all())
+logger.debug("weight sum smaller than 0: %s", df_opts_weight[df_opts_weight<0].sum(1))
 
