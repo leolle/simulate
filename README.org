@@ -172,7 +172,9 @@ x≥0
 ** TODO select groups bug.
 ** TODO group constraint return limit.
 ** add loss function objective.
-$$LossFunction = -ret + \lambda\sigma + \betaTransactionCost$$
+#+BEGIN_SRC latex
+LossFunction = -ret + \lambda*\sigma + \beta*TransactionCost
+#+END_SRC
 ** add transaction cost.
 multi-period optimization.
 try to minimize the transaction weight.
