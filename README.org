@@ -150,26 +150,32 @@ CLOSED: [2017-06-28 Wed 14:32]
 ** DONE compare portfolio between maximum sharpe ratio portfolio and Mean-Variance portfolio.
 CLOSED: [2017-06-29 Thu 14:12]
 maximum sharpe ratio portfolio is compatible with weight and exposure constraint.
-** change modifying default constraint value.
+** DONE change modifying default constraint value.
+CLOSED: [2017-07-03 Mon 09:41]
 ** DONE what if input asset, group, exposure constraint symbols are not in the risk model?
 CLOSED: [2017-06-29 Thu 14:51]
-** use annualized return.
-** change Quadratic Programming(QP) problem for sharpe ratio portfolio to quadratically constrained quadratic program (QCQP).
+** TODO use annualized return.
+** TODO change Quadratic Programming(QP) problem for sharpe ratio portfolio to quadratically constrained quadratic program (QCQP).
 QP is a subclass of QCQP, so as one would imagine, it is more difficult to solve QCQP, but luckily CVXOPT is up to the task after we convert the QCQP into an even more general class of optimization problems - second-order cone programs (SOCP).
+*** QCQPs to SOCPs
+CVXOPT does not have an explicit solver for QCQPs, rather we must convert the QCQP to a SOCP, or one could also convert it to a semidefinite program (SDP), which is more general than a SOCP.
 #+BEGIN_SRC latex
-\sigma = 1
-#+END_SRC
-$$ minimize Σx
-subject to x^TΣx≤\sigma_max
+minimize:
+Σx
+subject to:
+x^TΣx≤\sigma_max
 1^Tx=1
 x≥0
-$$
+#+END_SRC
+
 
 ** TODO select groups bug.
 ** TODO group constraint return limit.
 ** add loss function objective.
-$$loss function = -ret + \lambda\sigma + \beta transaction cost$$
+$$LossFunction = -ret + \lambda\sigma + \betaTransactionCost$$
 ** add transaction cost.
+multi-period optimization.
+try to minimize the transaction weight.
 ** change random selected symbols to ranked symbols.
 ** test the constraints.
 ** Use Constraint Attribution to understand the costs of your constraints.
