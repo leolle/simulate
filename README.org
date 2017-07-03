@@ -1,6 +1,6 @@
 #+OPTIONS: ':nil *:t -:t ::t <:t H:3 \n:nil ^:t arch:headline author:t c:nil
 #+OPTIONS: creator:nil d:(not "LOGBOOK") date:t e:t email:nil f:t inline:t
-#+OPTIONS: num:t p:nil pri:nil prop:nil stat:t tags:t tasks:t tex:nil timestamp:t
+#+OPTIONS: num:t p:nil pri:nil prop:nil stat:t tags:t tasks:t tex:auto timestamp:t
 #+OPTIONS: title:t toc:t todo:t |:t
 #+TITLES: README
 #+DATE: <2017-06-21 Wed>
@@ -22,6 +22,8 @@
 
 * 功能：
 ** 3种模式：
+*** subject to loss function.
+f(\alpha, \lambda , \beta) = -\alpha ret + \lambda \sigma + \beta transaction_cost
 *** 最小化风险；
 *** 在满足输入回报下，最小化风险；
 *** 在满足输入风险下，最大化收益。
@@ -200,13 +202,16 @@ x≥0
 #+BEGIN_SRC latex
 LossFunction = -ret + \lambda * \sigma + \beta * TransactionCost
 #+END_SRC
-** add transaction cost.
+** TODO add transaction cost.
 multi-period optimization.
 try to minimize the transaction weight.
+minimize loss function using sci.optmize.minimize
 ** change random selected symbols to ranked symbols.
 ** test the constraints.
 ** Use Constraint Attribution to understand the costs of your constraints.
 provides a dashboard view of the impact of individual constraints, objectives or groups of constraints
 on the objective function value (usually portfolio return) in your strategy. This tells you which elements of your strategy have an overall impact and which do not. It also provides a relative measure of the potential for improving the objective by relaxing different constraints.
-**  Objective frontiers
+** Objective frontiers
 can be used to create a classical mean variance frontier or to explore trade-offs, such as return vs. transaction costs or risk vs. tax liability
+** change input covariance matrix.
+** opt for multiperiod.

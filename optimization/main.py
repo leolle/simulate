@@ -385,7 +385,7 @@ def CVXOptimizerBnd(context, target_mode, position_limit, risk_model,
     target_date = pd.to_datetime(target_date)
     target_return = target_return * alpha_return
     target_risk = target_risk * lambda_risk
-    
+
     if asset_constraint is not None:
         asset_constraint = asset_constraint.asMatrix()
     if group_constraint is not None:
