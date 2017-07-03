@@ -33,7 +33,7 @@ The set of feasible portfolios is necessarily a nonempty, closed, and bounded se
 CVXOPT is a convex optimization package for Python that includes a Second Order Cone Programming (SOCP) solver.  The SOCP solver takes a set of matrices that describe the SOCP problem, but these matrices are different than the matrices usually used to express the SOCP problem.  This post walks through the simple algebra steps to find relationship between the two formulations of the SOCP problem.
 
 The SOCP problem as described in Wikipedia or the excellent free book Convex Optimization by Boyd and Vandenberghe includes the constraint:
-\| A x + b \|_2 \leq c^T x + d
+$\| A x + b \|_2 \leq c^T x + d$
 
 We can rewrite this to be:
 
