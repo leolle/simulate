@@ -87,6 +87,17 @@ To specify a portfolio optimization problem, you need the following:
     exposure constraint: OVV
         input factor exposure constraint, V1: lower boundary, V2: upper boundary.
 
+    alpha_return: double
+        coefficient number to adjust target return.
+        target_return = target_return * alpha_return
+
+    lambda_risk: double
+        coefficient number to adjust target risk
+        target_risk = target_risk * lambda_risk
+
+    beta_tranaction: double
+        multi-period transaction cost adjustment number.
+
 
     Returns:
     ----------
@@ -100,7 +111,6 @@ To specify a portfolio optimization problem, you need the following:
 J GID：
 A42325FC45B9D55C7C05056721AE3A88
 输入设置：
-
 
 输出结果：
 
@@ -144,6 +154,14 @@ maximum sharpe ratio portfolio is compatible with weight and exposure constraint
 ** DONE what if input asset, group, exposure constraint symbols are not in the risk model?
 CLOSED: [2017-06-29 Thu 14:51]
 ** use annualized return.
+** change Quadratic Programming(QP) problem for sharpe ratio portfolio to quadratically constrained quadratic program (QCQP).
+QP is a subclass of QCQP, so as one would imagine, it is more difficult to solve QCQP, but luckily CVXOPT is up to the task after we convert the QCQP into an even more general class of optimization problems - second-order cone programs (SOCP).
+$$ minimize Σx
+subject to x^TΣx≤\sigma_max
+1^Tx=1
+x≥0
+$$
+
 ** TODO select groups bug.
 ** TODO group constraint return limit.
 ** add loss function objective.
