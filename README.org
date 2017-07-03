@@ -156,6 +156,9 @@ CLOSED: [2017-06-29 Thu 14:51]
 ** use annualized return.
 ** change Quadratic Programming(QP) problem for sharpe ratio portfolio to quadratically constrained quadratic program (QCQP).
 QP is a subclass of QCQP, so as one would imagine, it is more difficult to solve QCQP, but luckily CVXOPT is up to the task after we convert the QCQP into an even more general class of optimization problems - second-order cone programs (SOCP).
+#+BEGIN_SRC equation
+\sigma = 1
+#+END_SRC
 $$ minimize Σx
 subject to x^TΣx≤\sigma_max
 1^Tx=1
