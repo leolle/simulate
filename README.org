@@ -32,19 +32,26 @@ CVXOPT is a convex optimization package for Python that includes a Second Order 
 
 The SOCP problem as described in Wikipedia or the excellent free book Convex Optimization by Boyd and Vandenberghe includes the constraint:
 $$
-\| A x + b \|_2 \leq c^T x + d $$
+\| A x + b \|_2 \leq c^T x + d
+$$
 
 We can rewrite this to be:
 
-$$ \begin{bmatrix} c^T \\ A \end{bmatrix} + \begin{bmatrix} d \\ b \end{bmatrix} = \begin{bmatrix} s_0 \\ s_1 \end{bmatrix}, \qquad s_0 \geq \| s_1 \|_2 $$
+$$
+\begin{bmatrix} c^T \\ A \end{bmatrix} + \begin{bmatrix} d \\ b \end{bmatrix} = \begin{bmatrix} s_0 \\ s_1 \end{bmatrix}, \qquad s_0 \geq \| s_1 \|_2
+$$
 
 Now to rearrange into the format expected by the CVXOPT solver:
 
-$$ - \begin{bmatrix} c^T \\ A \end{bmatrix} + \begin{bmatrix} s_0 \\ s_1 \end{bmatrix} = \begin{bmatrix} d \\ b \end{bmatrix} $$
+$$
+- \begin{bmatrix} c^T \\ A \end{bmatrix} + \begin{bmatrix} s_0 \\ s_1 \end{bmatrix} = \begin{bmatrix} d \\ b \end{bmatrix}
+$$
 
 And then see the relationship between the two formulations of the SOCP problem are equivalent:
 
-$$ G= \begin{bmatrix} -c^T \\ -A \end{bmatrix} and h = \begin{bmatrix}d \\ b \end{bmatrix} $$
+$$
+G= \begin{bmatrix} -c^T \\ -A \end{bmatrix} and h = \begin{bmatrix}d \\ b \end{bmatrix}
+$$
 
 ** Portfolio Problem Specification
 To specify a portfolio optimization problem, you need the following:
