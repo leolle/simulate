@@ -173,7 +173,7 @@ x≥0
 ** TODO group constraint return limit.
 ** add loss function objective.
 #+BEGIN_SRC latex
-LossFunction = -ret + \lambda*\sigma + \beta*TransactionCost
+LossFunction = -ret + \lambda * \sigma + \beta * TransactionCost
 #+END_SRC
 ** add transaction cost.
 multi-period optimization.
