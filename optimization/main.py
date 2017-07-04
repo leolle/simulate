@@ -330,18 +330,8 @@ def CVXOptimizerBnd(context, target_mode, position_limit, risk_model,
     position_limit: int
         maximum position number selected.
 
-    risk model: dictionary
-        Risk factor exposure: DataFrame
-            所有股票在因子上暴露的值，p.s. 如有8个因子，就有8个DataFrame,
-            得把所有8个因子某一天所有值先取出来得到一个n*k的矩阵.n为股票，k为因子
-        Specific Risk: DataFrame
-            用来组成对角矩阵Delta.
-
     cov_matrix: OOTV
         covariance matrix from risk model if holdings are stocks.
-
-    specific_risk: OTV
-        O: stocks symbol. None for funds.
 
     asset_return: Dataframe, OTV,
         asset return for all symbols.
@@ -357,8 +347,11 @@ def CVXOptimizerBnd(context, target_mode, position_limit, risk_model,
     target_risk: double
         Portfolio risk tolerance whose objective is maximum return.
 
-    target_date: Timestamp
-        Specific date.
+    start_date: Timestamp
+        start date for multiperiod optimization.
+
+    end_date: Timestamp
+        end date for multiperiod optimization, should be in range of asset return and asset weight date.
 
     asset_constraint: OVV
         input asset constraint, V1: lower boundary, V2: upper boundary.

@@ -22,13 +22,13 @@
 
 * 功能：
 ** 3种模式：
+Portfolios are points from a feasible set of assets that constitute an asset universe. A portfolio specifies either holdings or weights in each individual asset in the asset universe. The convention is to specify portfolios in terms of weights, although the portfolio optimization tools work with holdings as well.
+The set of feasible portfolios is necessarily a nonempty, closed, and bounded set. The proxy for risk is a function that characterizes either the variability or losses associated with portfolio choices. The proxy for return is a function that characterizes either the gross or net benefits associated with portfolio choices. The terms "risk" and "risk proxy" and "return" and "return proxy" are interchangeable. The fundamental insight of Markowitz (see Portfolio Optimization) is that the goal of the portfolio choice problem is to seek minimum risk for a given level of return and to seek maximum return for a given level of risk. Portfolios satisfying these criteria are efficient portfolios and the graph of the risks and returns of these portfolios forms a curve called the efficient frontier.
 *** subject to loss function.
 f(\alpha, \lambda , \beta) = -\alpha ret + \lambda \sigma + \beta transaction_cost
 *** 最小化风险；
 *** 在满足输入回报下，最小化风险；
 *** 在满足输入风险下，最大化收益。
-Portfolios are points from a feasible set of assets that constitute an asset universe. A portfolio specifies either holdings or weights in each individual asset in the asset universe. The convention is to specify portfolios in terms of weights, although the portfolio optimization tools work with holdings as well.
-The set of feasible portfolios is necessarily a nonempty, closed, and bounded set. The proxy for risk is a function that characterizes either the variability or losses associated with portfolio choices. The proxy for return is a function that characterizes either the gross or net benefits associated with portfolio choices. The terms "risk" and "risk proxy" and "return" and "return proxy" are interchangeable. The fundamental insight of Markowitz (see Portfolio Optimization) is that the goal of the portfolio choice problem is to seek minimum risk for a given level of return and to seek maximum return for a given level of risk. Portfolios satisfying these criteria are efficient portfolios and the graph of the risks and returns of these portfolios forms a curve called the efficient frontier.
 **** Second Order Cone Programming with CVXOPT
 CVXOPT is a convex optimization package for Python that includes a Second Order Cone Programming (SOCP) solver.  The SOCP solver takes a set of matrices that describe the SOCP problem, but these matrices are different than the matrices usually used to express the SOCP problem.  This post walks through the simple algebra steps to find relationship between the two formulations of the SOCP problem.
 
@@ -180,6 +180,7 @@ maximum sharpe ratio portfolio is compatible with weight and exposure constraint
 CLOSED: [2017-07-03 Mon 09:41]
 ** DONE what if input asset, group, exposure constraint symbols are not in the risk model?
 CLOSED: [2017-06-29 Thu 14:51]
+** TODO make covariance matrix generation function for stocks.
 ** TODO add loss function objective.
 #+BEGIN_SRC equation
 LossFunction = -ret + \lambda * \sigma + \beta * TransactionCost
@@ -211,4 +212,4 @@ minimize loss function using sci.optmize.minimize
 ** test the constraints.
 ** change random selected symbols to ranked symbols.
 ** Objective frontiers
-can be used to create a classical mean variance frontier or to explore trade-offs, such as return vs. transaction costs or risk vs. tax liability
+can be used to create a classical mean variance frontier or to explore trade-offs, such as return vs. transaction costs or risk vs. tax liability.
