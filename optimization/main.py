@@ -337,6 +337,12 @@ def CVXOptimizerBnd(context, target_mode, position_limit, risk_model,
         Specific Risk: DataFrame
             用来组成对角矩阵Delta.
 
+    cov_matrix: OOTV
+        covariance matrix from risk model if holdings are stocks.
+
+    specific_risk: OTV
+        O: stocks symbol. None for funds.
+
     asset_return: Dataframe, OTV,
         asset return for all symbols.
         index=date, O: asset names, V: asset return.

@@ -37,9 +37,7 @@ $\| A x + b \|_2 \leq c^T x + d$
 
 We can rewrite this to be:
 
-
 \begin{bmatrix} c^T \\ A \end{bmatrix} + \begin{bmatrix} d \\ b \end{bmatrix} = \begin{bmatrix} s_0 \\ s_1 \end{bmatrix}, \qquad s_0 \geq \| s_1 \|_2
-
 
 Now to rearrange into the format expected by the CVXOPT solver:
 
@@ -73,19 +71,20 @@ To specify a portfolio optimization problem, you need the following:
         0: minimum risk.
         1: minimum risk subject to target return.
         2: maximum sharpe ratio subject to target risk.
+        3: loss function.
 
     position_limit: int
         maximum position number selected.
 
-    risk model: dictionary
-        Risk factor exposure: DataFrame
-            所有股票在因子上暴露的值，p.s. 如有8个因子，就有8个DataFrame,
-            得把所有8个因子某一天所有值先取出来得到一个n*k的矩阵.n为股票，k为因子
-        Specific Risk: DataFrame
-            用来组成对角矩阵Delta.
+    cov_matrix: OOTV
+        covariance matrix from risk model if holdings are stocks.
+        factor_exposure_matrix.dot(covariance_matrix).dot(factor_exposure_matrix.T)
+
+    specific_risk: OTV
+        O: stocks symbol. None for funds.
 
     asset_return: Dataframe, OTV,
-        asset return for all symbols.
+        forecasted asset return for all symbols.
         index=date, O: asset names, V: asset return.
 
     asset_weight: Dataframe, OOTV
@@ -98,8 +97,11 @@ To specify a portfolio optimization problem, you need the following:
     target_risk: double
         Portfolio risk tolerance whose objective is maximum return.
 
-    target_date: Timestamp
-        Specific date.
+    start_date: Timestamp
+        start date for multiperiod optimization.
+
+    end_date: Timestamp
+        end date for multiperiod optimization, should be in range of asset return and asset weight date.
 
     asset_constraint: OVV
         input asset constraint, V1: lower boundary, V2: upper boundary.
@@ -150,7 +152,8 @@ CLOSED: [2017-06-23 Fri 14:46]
 add position limit will cause rank(A) < p
 ** DONE maximum return subject to target risk.
 CLOSED: [2017-06-23 Fri 14:46]
-** add more constraint
+** DONE add more constraint
+CLOSED: [2017-07-04 Tue 09:37]
 default None Value
 ** DONE find the reason of why optimal result can't be reached.
 CLOSED: [2017-06-25 Sun 20:35]
@@ -177,7 +180,11 @@ maximum sharpe ratio portfolio is compatible with weight and exposure constraint
 CLOSED: [2017-07-03 Mon 09:41]
 ** DONE what if input asset, group, exposure constraint symbols are not in the risk model?
 CLOSED: [2017-06-29 Thu 14:51]
-** TODO use annualized return.
+** TODO add loss function objective.
+#+BEGIN_SRC equation
+LossFunction = -ret + \lambda * \sigma + \beta * TransactionCost
+#+END_SRC
+** TODO use expcted return.
 ** TODO change Quadratic Programming(QP) problem for sharpe ratio portfolio to quadratically constrained quadratic program (QCQP).
 QP is a subclass of QCQP, so as one would imagine, it is more difficult to solve QCQP, but luckily CVXOPT is up to the task after we convert the QCQP into an even more general class of optimization problems - second-order cone programs (SOCP).
 *** QCQPs to SOCPs
@@ -190,24 +197,18 @@ x^TΣx≤\sigma_max
 1^Tx=1
 x≥0
 #+END_SRC
-
-
+** TODO change input: covariance matrix.
+** TODO opt for multiperiod.
 ** TODO select groups bug.
-** TODO group constraint return limit.
-** add loss function objective.
-#+BEGIN_SRC equation
-LossFunction = -ret + \lambda * \sigma + \beta * TransactionCost
-#+END_SRC
+** group constraint return limit.
+** Use Constraint Attribution to understand the costs of your constraints.
+provides a dashboard view of the impact of individual constraints, objectives or groups of constraints
+on the objective function value (usually portfolio return) in your strategy. This tells you which elements of your strategy have an overall impact and which do not. It also provides a relative measure of the potential for improving the objective by relaxing different constraints.
 ** TODO add transaction cost.
 multi-period optimization.
 try to minimize the transaction weight.
 minimize loss function using sci.optmize.minimize
-** change random selected symbols to ranked symbols.
 ** test the constraints.
-** Use Constraint Attribution to understand the costs of your constraints.
-provides a dashboard view of the impact of individual constraints, objectives or groups of constraints
-on the objective function value (usually portfolio return) in your strategy. This tells you which elements of your strategy have an overall impact and which do not. It also provides a relative measure of the potential for improving the objective by relaxing different constraints.
+** change random selected symbols to ranked symbols.
 ** Objective frontiers
 can be used to create a classical mean variance frontier or to explore trade-offs, such as return vs. transaction costs or risk vs. tax liability
-** change input covariance matrix.
-** opt for multiperiod.
