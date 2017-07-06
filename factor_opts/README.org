@@ -24,3 +24,7 @@ w_n\\
 =(-r_1+\lambda \sigma_1 + \beta TransactionCost_1)w_1 + ... + (-r_n+\lambda \sigma_n + \beta TransactionCost_n)w_n,
 
 \text{where w is portfolio weight for each strategy.}
+
+* TODO Bugs
+- [ ] optimized portfolio weight is different everytime, check input of Y hat.
+- [X] Excess return uses single period difference to calculate annualized return, not using annualized return difference. long/short 1:1.
