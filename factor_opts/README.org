@@ -26,5 +26,6 @@ w_n\\
 \text{where w is portfolio weight for each strategy.}
 
 * TODO Bugs
-- [ ] optimized portfolio weight is different everytime, check input of Y hat.
+- [X] optimized portfolio weight is different everytime, check input of Y hat.
+Y hat are different each time.
 - [X] Excess return uses single period difference to calculate annualized return, not using annualized return difference. long/short 1:1.
