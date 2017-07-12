@@ -27,7 +27,7 @@ flat_list = [item for sublist in ls_symbols for item in sublist]
     
 ls_symbols = list(set(flat_list))    
 ls_dates = risk_model[factor].asMatrix().index
-                     
+
 index = pd.MultiIndex.from_product([ls_dates, ls_symbols], names=['date', 'symbol'])
 
 df_factor_exposure = pd.DataFrame(index=index, columns=ls_factor)
