@@ -10,7 +10,8 @@ from cvxopt.blas import dot
 from lib.gftTools import gftIO
 
 # fetch data
-path = r'd:/share/optimize/'
+
+path = '~/share/'
 
 target_mode = gftIO.zload(os.path.join(path, 'x0.pkl'))
 position_limit = gftIO.zload(os.path.join(path, 'x1.pkl'))
