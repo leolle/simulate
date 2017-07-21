@@ -122,6 +122,8 @@ A42325FC45B9D55C7C05056721AE3A88
 J GID：
 0AB023977FD09C6BE8196C351D41A098
 模式3计算时间大概需要10分钟。
+
+** 根据active portfolio management与axioma做出类似产品效果， 修改constraint条件。
 * optimization:
 ** DONE position limit
 CLOSED: [2017-06-23 Fri 14:46]
