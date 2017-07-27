@@ -68,6 +68,14 @@ class Const(BaseConst):
     IndStyleFMCAR="IndStyleFMCAR"
     PortExpo="PortExpo"
     BenchmarkExpo="BenchmarkExpo"
+    
+    PortExpoInd="PortExpoInd"
+    PortExpoSty="PortExpoSty"
+    BenchmarkExpoInd="BenchmarkExpoInd"
+    BenchmarkExpoSty="BenchmarkExpoSty"
+    TotIndustryFMCAR="TotIndustryFMCAR"
+    TotStyleFMCAR="TotStyleFMCAR"
+    
     #BELOW IS FOR MACHINE LEARNING
     WINDOW_SIZE = 5
     TOTAL_BINS = 10

@@ -10,6 +10,7 @@ from cvxopt.blas import dot
 from lib.gftTools import gftIO
 
 # fetch data
+<<<<<<< HEAD
 path = '/home/weiwu/share/optimize/'
 
 alpha_return = gftIO.zload(os.path.join(path, 'alpha_return.pkl'))
@@ -22,6 +23,18 @@ factor_exposure = gftIO.zload(os.path.join(path, 'factor_exposure.pkl'))
 group_constraint = gftIO.zload(os.path.join(path, 'group_constraint.pkl'))
 lambda_risk = gftIO.zload(os.path.join(path, 'lambda_risk.pkl'))
 position_limit = gftIO.zload(os.path.join(path, 'position_limit.pkl'))
+=======
+
+path = '~/share/'
+
+target_mode = gftIO.zload(os.path.join(path, 'x0.pkl'))
+position_limit = gftIO.zload(os.path.join(path, 'x1.pkl'))
+covariance_matrix = gftIO.zload(os.path.join(path, 'fx2.pkl'))
+asset_return = gftIO.zload(os.path.join(path, 'x3.pkl'))
+asset_weight = gftIO.zload(os.path.join(path, 'x4.pkl'))
+target_risk = gftIO.zload(os.path.join(path, 'x5.pkl'))
+target_return = gftIO.zload(os.path.join(path, 'x6.pkl'))
+>>>>>>> 9d5053ba8eaa8045c3b971477c9c1073302d8acb
 risk_model = gftIO.zload(os.path.join(path, 'risk_model.pkl'))
 target_date = gftIO.zload(os.path.join(path, 'target_date.pkl'))
 target_mode = gftIO.zload(os.path.join(path, 'target_mode.pkl'))
@@ -341,12 +354,8 @@ def CVXOptimizerBnd(context, target_mode, position_limit, risk_model,
         asset return for all symbols.
         index=date, O: asset names, V: asset return.
 
-    risk model: dictionary
-        Risk factor exposure: DataFrame
-            所有股票在因子上暴露的值，p.s. 如有8个因子，就有8个DataFrame,
-            得把所有8个因子某一天所有值先取出来得到一个n*k的矩阵.n为股票，k为因子
-        Specific Risk: DataFrame
-            用来组成对角矩阵Delta.
+    cov_matrix: OOTV
+        covariance matrix from risk model if holdings are stocks.
 
     asset_weight: Dataframe, OOTV
         T=date, O: asset names, O: group names, V: asset weight.
@@ -358,6 +367,25 @@ def CVXOptimizerBnd(context, target_mode, position_limit, risk_model,
     target_risk: double
         Portfolio risk tolerance whose objective is maximum return.
 
+<<<<<<< HEAD
+=======
+    start_date: Timestamp
+        start date for multiperiod optimization.
+
+    end_date: Timestamp
+        end date for multiperiod optimization, should be in range of asset return and asset weight date.
+
+    asset_constraint: OVV
+        input asset constraint, V1: lower boundary, V2: upper boundary.
+
+    group constraint: OVV
+        input group constraint, V1: lower boundary, V2: upper boundary.
+
+    exposure constraint: OVV
+        input factor exposure constraint, V1: lower boundary, V2: upper boundary.
+
+
+>>>>>>> 9d5053ba8eaa8045c3b971477c9c1073302d8acb
     Returns:
     ----------
     df_result: DataFrame
@@ -379,6 +407,10 @@ def CVXOptimizerBnd(context, target_mode, position_limit, risk_model,
     target_date = pd.to_datetime(target_date)
     target_return = target_return * alpha_return
     target_risk = target_risk * lambda_risk
+<<<<<<< HEAD
+=======
+
+>>>>>>> 9d5053ba8eaa8045c3b971477c9c1073302d8acb
     if asset_constraint is not None:
         asset_constraint = asset_constraint.asMatrix()
     if group_constraint is not None:

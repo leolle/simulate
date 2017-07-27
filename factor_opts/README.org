@@ -1,0 +1,31 @@
+#+LATEX_CLASS: article
+#+LATEX_CLASS_OPTIONS:
+#+LATEX_HEADER:
+#+LATEX_HEADER_EXTRA:
+#+DESCRIPTION:
+#+KEYWORDS:
+#+SUBTITLE:
+#+DATE: \today
+
+
+* Feature:
+- loss function:
+\text{minimize:}
+\begin{bmatrix}
+-r_1+\lambda \sigma_1 + \beta TransactionCost_1 & ... & -r_n+\lambda \sigma_n + \beta TransactionCost_n
+\end{bmatrix}
+\begin{bmatrix}
+w_1\\
+.\\
+.\\
+.\\
+w_n\\
+\end{bmatrix}
+=(-r_1+\lambda \sigma_1 + \beta TransactionCost_1)w_1 + ... + (-r_n+\lambda \sigma_n + \beta TransactionCost_n)w_n,
+
+\text{where w is portfolio weight for each strategy.}
+
+* TODO Bugs
+- [X] optimized portfolio weight is different everytime, check input of Y hat.
+Y hat are different each time.
+- [X] Excess return uses single period difference to calculate annualized return, not using annualized return difference. long/short 1:1.

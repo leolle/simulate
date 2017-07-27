@@ -1,10 +1,10 @@
 import pickle, zlib
 import numpy as np
 import pandas as pd
-import pandas.util.testing as tm
 import binascii
 import time
 import random
+import copy
 
 
 def zdump(value, filename):
@@ -24,7 +24,6 @@ def getCacheHeader():
 
 
 cacheHeader = getCacheHeader()
-
 
 
 def dump4CacheSever(value, timestamp, filename):
@@ -70,6 +69,7 @@ def zload(filename):
 
 inst_gid = None
 
+
 def get_inst_gid():
     return inst_gid
 
@@ -96,16 +96,29 @@ def convertColumnTabl2Matrix(columnTab):
             if tName is None:
                 tName = colName
 
-    if (vName is None) or (oName is None) or (tName is None):
-        raise "can not change columnTab to matrix"
-    else:
-        return columnTab.pivot_table(values=vName, index=tName, columns=oName)  ##将cov变成wide format格式
+    if vName is None:
+        raise Exception("v Name is None")
+
+    if tName is None:
+        raise Exception("tName is None")
+
+    if oName is None:
+        try:
+            unique = columnTab.set_index(keys=tName, verify_integrity=True)
+            unique.columns = np.chararray(1, itemsize=16, buffer='\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0')
+            return unique
+        except Exception:
+            raise Exception("Can not transform TV to matrix, T is not unique")
+
+    return columnTab.pivot_table(values=vName, index=tName, columns=oName)  ##将cov变成wide format格式
+
 
 def isNonSymbol(df):
     if isinstance(df, pd.DataFrame):
         if ismatrix(df):
             return df.columns[0].__len__() == 0
     return False
+
 
 # class saving data for both matrix(wide format) and columnTable(long format)
 class GftTable:
@@ -127,7 +140,6 @@ class GftTable:
         if self.matrix is not None:
             return self.matrix.columns[0].__len__() == 0
         return False
-
 
     @classmethod
     def fromCppMatrix(cls, matrix):
@@ -178,7 +190,8 @@ class gs_parameter:
 
     @classmethod
     def gen_rand_para(cls):
-        return gs_parameter(random.getrandbits(128).to_bytes(16,byteorder='little',signed=False))
+        return gs_parameter(random.getrandbits(128).to_bytes(16, byteorder='little', signed=False))
+
 
 class gs_context:
     def __init__(self, myself, input_gid_list, begin_time, end_time, lookback):
@@ -191,10 +204,11 @@ class gs_context:
     @classmethod
     def gen_rand_context(cls, input_len):
         gid = gs_parameter.gen_rand_para()
-        input_list= [None]*input_len
+        input_list = [None] * input_len
         for i in range(input_len):
             input_list[i] = gs_parameter.gen_rand_para()
         return gs_context(gid, input_list, None, None, None)
+
 
 def gen_gs_context_from_gid(my_gid, input_gid_list):
     my_para = gs_parameter(my_gid)
@@ -270,14 +284,16 @@ PARAMETER_TYPE_PYTHON_ONLY = int(27)
 PARAMETER_TYPE_TIMESTAMP = int(2)
 PARAMETER_TYPE_UUID = int(4)
 
+
 def get_column_type(col_table: pd.DataFrame, name: str):
     dName = str(col_table[name].dtype)
-    if  'datetime64' in dName:
+    if 'datetime64' in dName:
         return PARAMETER_TYPE_TIMESTAMP
     elif 'float' in dName:
         return PARAMETER_TYPE_NUMBER_NUMRIC
     else:
         return PARAMETER_TYPE_UUID
+
 
 def get_columns_type_dict(col_table: pd.DataFrame):
     ret = dict()
@@ -347,6 +363,83 @@ def transformCppInput(data, parType):
     return data
 
 
+def test_coord(l_val, r_val):
+    return l_val.equals(r_val)
+
+
+def test_dataframe(l_val: pd.DataFrame, r_val: pd.DataFrame):
+    return l_val.equals(r_val)
+
+
+def test_gft_table(l_val, r_val):
+    if (l_val.matrix is not None) and (r_val.matrix is not None):
+        if not test_dataframe(l_val.matrix, r_val.matrix):
+            return False
+
+    if (l_val.columnTab is not None) and (r_val.columnTab is not None):
+        if not test_dataframe(l_val.columnTab, r_val.columnTab):
+            return False
+    return True
+
+
+def test_np_darray(l_val, r_val):
+    if l_val.dtype == r_val.dtype and l_val.shape == r_val.shape:
+        return (np.nan_to_num(l_val) == np.nan_to_num(r_val)).all();
+    return False
+
+
+def test_dict(l_val, r_val, recursive):
+    if l_val.keys() == r_val.keys():
+        for key in l_val.keys():
+            if not test_equality(l_val[key], r_val[key], recursive):
+                return False
+        return True
+    return False
+
+
+def copyAndSave(key, value, old_dict, new_dict):
+    old_dict[key] = value
+    dataCp = copy.deepcopy(value)
+    new_dict[key] = dataCp
+    return dataCp
+
+
+def testTwoDic(old_dict: dict, new_dict: dict, function_name: str):
+    for name in old_dict.keys():
+        if not test_equality(old_dict[name], new_dict[name], True):
+            raise Exception(("input[" + name + "] is modified after call function:[$gid[" + function_name + "]]"))
+
+def test_equality(l_val, r_val, recursive):
+    if l_val.__class__ == r_val.__class__:
+        if isinstance(l_val, pd.DataFrame):
+            return test_dataframe(l_val, r_val)
+        elif isinstance(l_val, GftTable):
+            return test_gft_table(l_val, r_val)
+        elif isinstance(l_val, np.ndarray):
+            return test_np_darray(l_val, r_val)
+        elif isinstance(l_val, np.chararray):
+            return test_np_darray(l_val, r_val)
+        elif isinstance(l_val, pd.core.indexes.datetimes.DatetimeIndex):
+            return test_coord(l_val, r_val)
+        elif isinstance(l_val, pd.core.indexes.base.Index):
+            return test_coord(l_val, r_val)
+        elif isinstance(l_val, dict):
+            return test_dict(l_val, r_val, recursive)
+        elif l_val.__dir__().__contains__("__dict__"):
+            if recursive:
+                return test_dict(l_val.__dict__, False)
+            elif l_val.__dir__().__contains__("__eq__"):
+                return l_val.__eq__(r_val)
+            elif l_val.__dir__().__contains__("equals"):
+                return l_val.equals(r_val)
+            else:
+                #blindly return true.
+                return True
+        else:
+            return l_val == r_val
+    return False
+
+
 def transformInput(data):
     if isinstance(data, int):
         # 62091 is the difference between 1970-01-01 and 1800-01-01
@@ -391,7 +484,7 @@ def gidStrHex2IntPairs(gid_str):
     elif gid_str == "GFT":
         return int(0), int(0)
     else:
-        raise "String [" + gid_str + "] len is not 32"
+        raise Exception("String [" + gid_str + "] len is not 32")
 
 
 def printStr(gid_str):
@@ -558,9 +651,11 @@ def transformOutput(obj):
     else:
         return obj
 
+
 def is_serializable_2_cpp(obj):
     invert_op = getattr(obj, "__serialize__", None)
     return callable(invert_op)
+
 
 def slice_data_inplace(data, begin_time: pd.Timestamp, end_time: pd.Timestamp):
     if isinstance(data, GftTable):
@@ -571,7 +666,7 @@ def slice_data_inplace(data, begin_time: pd.Timestamp, end_time: pd.Timestamp):
             return slice_matrix(data, begin_time, end_time)
         else:
             return slice_column_table(data, begin_time, end_time)
-    elif isinstance(data,pd.tseries.index.DatetimeIndex):
+    elif isinstance(data, pd.core.indexes.datetimes.DatetimeIndex):  #
         return data[(data > begin_time) & (data <= end_time)]
     elif is_serializable_2_cpp(data):
         all_data = data.__serialize__()
@@ -610,7 +705,8 @@ def slice_table_inplace(gft_table: GftTable, begin_time: pd.Timestamp, end_time:
             sliced_rows = column_table.loc[(column_table[pt_name] > begin_time) & (column_table[pt_name] <= end_time)]
             gft_table.columnTab = sliced_rows
     if gft_table.matrix is not None:
-        sliced_matrix = gft_table.matrix.loc[(gft_table.matrix.index > begin_time) & (gft_table.matrix.index <= end_time)]
+        sliced_matrix = gft_table.matrix.loc[
+            (gft_table.matrix.index > begin_time) & (gft_table.matrix.index <= end_time)]
         gft_table.matrix = sliced_matrix
 
 
