@@ -158,78 +158,6 @@ class ConstraintError(Exception):
     pass
 
 
-def check_constraint_issue(mx_P, mx_q, mx_G, mx_h, mx_A, mx_b,
-                           mx_asset_sub, mx_group_sub, mx_exp_sub,
-                           mx_asset_bnd, mx_group_bnd, mx_exp_bnd):
-    ''' check which constraint fails.
-
-    Parameters
-    ----------
-    mx_G: 1xn matrix
-        matrix only includes returns.
-    mx_h: 1x1 matrix
-        target return matrix.
-    mx_asset_sub: 2nxn subsets matrix, n=asset number
-        2 nx1 identity matrices.
-    mx_group_sub: 2axn subsets matrix, a=group number
-        2 axn spmatrices.
-    mx_exp_sub: 2bxn subsets matrix, b=exposure factors number
-        2bxn identity matrices.
-    mx_asset_bnd: 2nx1 matrix, n=asset number
-        asset weight constraint matrix
-    mx_group_bnd: 2ax1 matrix, a=group number
-        group weight constraint matrix
-    mx_exp_bnd: 2bx1 matrix, b=exposure factors number
-        factor exposure constraint matrix
-
-    Returns
-    -------
-    None
-    '''
-    import itertools
-    G = matrix(sparse([mx_G, mx_asset_sub]))
-    h = matrix(sparse([mx_h, mx_asset_bnd]))
-
-    boundary_sub = [mx_group_sub, mx_exp_sub]
-    limit = [mx_group_bnd, mx_exp_bnd]
-    error = ('group ', 'exposure ')
-    stuff = [1, 2]
-    for L in range(0, len(stuff)+1):
-        for subset in itertools.combinations(stuff, L):
-            if len(subset) == 0:
-                try:
-                    # G_pos = matrix(sparse([G, matrix(-np.eye(n), tc='d')]))
-                    # h_pos = matrix(sparse([h, matrix(np.zeros((n, 1)))]))
-                    sol = solvers.qp(mx_P, mx_q, G, h, mx_A, mx_b)
-                    if sol['x'] == 'unknown':
-                        raise('failed to get optimal value on\
-                        position limit constraint')
-                except ValueError as e:
-                    raise ConstraintError('ERROR on solving position limit\
-                    constraint only')
-
-            if len(subset) > 0:
-                ls = [x-1 for x in list(subset)]
-                g_matrix = []
-                h_matrix = []
-                g_matrix.append(G)
-                h_matrix.append(h)
-                for i in ls:
-                    g_matrix.append(boundary_sub[i])
-                    h_matrix.append(limit[i])
-
-                G_val = matrix(sparse(g_matrix))
-                h_val = matrix(sparse(h_matrix))
-
-                try:
-                    sol = solvers.qp(mx_P, mx_q, G_val, h_val, mx_A, mx_b)
-                    if sol['x'] == 'unknown':
-                        print('failed to get optimal value on %s', [error[i] for i in ls])
-                except ValueError as e:
-                    raise ConstraintError('ERROR on solving combination %s, %s' % ([error[i] for i in ls], e))
-
-    return True
-
 def statistics(weights, rets, covariance):
     """Compute expected portfolio statistics from individual asset returns.
 
@@ -307,9 +235,6 @@ handler.setFormatter(formatter)
 logger.addHandler(handler)
 logger.setLevel(logging.DEBUG)
 
-
-solvers.options['show_progress'] = True
-
 x0 = gftIO.zload("/home/weiwu/share/optimize/x0.pkl")
 x1 = gftIO.zload("/home/weiwu/share/optimize/x1.pkl")
 x2 = gftIO.zload("/home/weiwu/share/optimize/x2.pkl")
@@ -338,25 +263,14 @@ asset_return = x3.asMatrix()
 asset_weights = x4.asColumnTab()
 target_date = pd.to_datetime(target_date)
 asset_weights.date = target_date
-
+exposure_constraint = x10.asColumnTab()
+exposure_constraint = exposure_constraint.pivot(
+    index='date', columns='index', values='Wb')
 position_limit = 200
 if asset_constraint is not None:
     asset_constraint = asset_constraint.asMatrix()
 if group_constraint is not None:
     group_constraint = group_constraint.asMatrix()
-
-exposure_constraint = pd.DataFrame(data=[[0.237147, 0.215739, 1.737035,
-                                         -0.043088, -0.136166, 0.165721,
-                                         0.080216, -0.163873]],
-                                   columns=[b'\x06\x92"\tM\xf9<\x87$\xdc(#\xc3\xacu\xd6',
-                                            b'U/X\xa7d\x8f\x1eD\xf1\x85b!*\xe4\xcb;',
-                                            b'\x84\x9e\x03_c\xda\xcc\xb9\\\xbc\x08\xdbd\xf9\x89\xd4',
-                                            b'\xbaH\x12\xb8\xfa,\xb0\xb1\xd2\x9bv`\xe7Tw\xa8',
-                                            b'\xc1\x8b\xc3\x13\xc3S\x85\xeb\xba"\x86y-\x97\xe1\x80',
-                                            b'\xebI\xcb\xc0\xa75>\xbe\xe7ceV\x1d\xb4\x1c\x9e',
-                                            b'\xf4&\xe31/\x91\xec\xab\xfa\xc8\x87\xf7zP\xfc\xc1',
-                                            b'\xf9 \xc4\x15\xa9\x0e\xd7\xe8\x8cx@\x15\xb2[\x00\xb9'])
-
 
 logger.debug('parse data finished!')
 logger.debug('asset return number: %s', asset_return.shape[1])
@@ -368,10 +282,6 @@ ls_factor = [x[:-4] for x in risk_model.keys() if re.search(".ret$", x)]
 
 specific_risk = risk_model['specificRisk'].pivot(
     index='date', columns='symbol', values='specificrisk')
-# target_date = pd.datetime(year=2016, month=10, day=31)
-# target_return = -0.00096377
-# target_risk = 3.16026352e-06
-#target_mode = 1
 
 # find the nearest date next to target date from specific risk
 dt_next_to_target = specific_risk.index.searchsorted(target_date)
@@ -437,133 +347,69 @@ cov_matrix = cov_matrix.pivot(index='factorid1', columns='factorid2',
                               values='value')
 cov_matrix = cov_matrix.reindex(all_factors, all_factors, fill_value=np.nan)
 
-cov_matrix_V = big_X.dot(cov_matrix).dot(big_X.T) + delta
-
-
-# P = matrix(cov_matrix_V.values)
-# q = matrix(np.zeros((noa, 1)), tc='d')
-
-# A = matrix(1.0, (1, noa))
-# b = matrix(1.0)
-
-# # for group weight constraint
-# groups = df_pivot_industries_asset_weights.groupby(
-#     axis=1, level=0, sort=False, group_keys=False).count().\
-#     iloc[-1, :].values
-# num_group = len(groups)
-# num_asset = np.sum(groups)
-
-# logger.debug('number of assets in groups: %s', groups)
-# logger.debug('number of groups: %s', num_group)
-
-
-# # set boundary vector for h
-# df_asset_weight = pd.DataFrame({'lower': [0.0], 'upper': [1.0]},
-#                                index=idx_level_1_value)
-# df_group_weight = pd.DataFrame({'lower': [0.0], 'upper': [1.0]},
-#                                index=set(idx_level_0_value))
-# df_factor_exposure_bound = pd.DataFrame(index=exposure_constraint.columns, columns=[['lower', 'upper']])
-
-# df_factor_exposure_bound.loc[exposure_constraint.ix[-1]>0, 'lower'] = exposure_constraint.ix[-1][exposure_constraint.ix[-1]>0]*(0.9)
-# df_factor_exposure_bound.loc[exposure_constraint.ix[-1]>0, 'upper'] = exposure_constraint.ix[-1][exposure_constraint.ix[-1]>0]*(1.1)
-# df_factor_exposure_bound.loc[exposure_constraint.ix[-1]<0, 'lower'] = exposure_constraint.ix[-1][exposure_constraint.ix[-1]<0]*(1.1)
-# df_factor_exposure_bound.loc[exposure_constraint.ix[-1]<0, 'upper'] = exposure_constraint.ix[-1][exposure_constraint.ix[-1]<0]*(0.9)
-# df_factor_exposure_bound = df_factor_exposure_bound.astype(np.double)
-#df_factor_exposure_bound.lower = big_X.T.loc[exposure_constraint.columns,:].min(axis=1)
-#df_factor_exposure_bound.upper = big_X.T.loc[exposure_constraint.columns,:].max(axis=1)
-
-
-
-#if check_boundary_constraint(df_asset_weight, df_group_weight,
-#                             df_factor_exposure_bound, big_X):
-#    logger.debug("boundary setting is fine")
-#
-# df_asset_bnd_matrix = matrix(np.concatenate(((df_asset_weight.upper,
-#                                               df_asset_weight.lower)), 0))
-# df_group_bnd_matrix = matrix(np.concatenate(((df_group_weight.upper,
-#                                               df_group_weight.lower)), 0))
-# #df_factor_exposure_bnd_matrix = matrix(np.concatenate(((df_factor_exposure_bound.upper,
-# #                                                        df_factor_exposure_bound.lower)), 0))
-# #df_factor_exposure_bnd_matrix = matrix(df_factor_exposure_bound.upper.values*100.0)
-# df_factor_exposure_bnd_matrix = matrix(df_factor_exposure_bound.lower.values)
-#df_factor_exposure_bnd_matrix = matrix(df_factor_exposure_bound.iloc[0,0])
-
-# Assuming AvgReturns as the expected returns if parameter is not specified
 rets_mean = logrels(asset_return).mean()
 avg_ret = matrix(rets_mean.values)
-# G = matrix(-np.transpose(np.array(avg_ret)))
-# h = matrix(-np.ones((1, 1))*target_return)
-# G_sparse_list = []
-# for i in range(num_group):
-#     for j in range(groups[i]):
-#         G_sparse_list.append(i)
-# Group_sub = spmatrix(1.0, G_sparse_list, range(num_asset))
 
-# Group_sub = matrix(sparse([Group_sub, -Group_sub]))
+# set boundary vector for h
+df_asset_weight = pd.DataFrame({'lower': [0.0], 'upper': [1.0]},
+                               index=idx_level_1_value)
+df_group_weight = pd.DataFrame({'lower': [0.0], 'upper': [1.0]},
+                               index=idx_level_0_value)
 
-# asset_sub = matrix(np.eye(noa))
-# asset_sub = matrix(sparse([asset_sub, -asset_sub]))
-# #exp_sub = matrix(np.array(big_X.T.loc[df_factor_exposure_bound.index, idx_level_1_value]))
-# exp_sub = matrix(-np.array(big_X.T.loc[df_factor_exposure_bound.index, idx_level_1_value]))
-#exp_sub = matrix(sparse([exp_sub, -exp_sub]))
+def set_upper_limit(x, multiplier=0.1):
+    if x>= 0:
+        return x*(1 + multiplier)
+    else:
+        return x*(1 - multiplier)
 
 
-# if exposure_constraint is not None:
-#     G0 = matrix(sparse([ exp_sub]))
-#     h0 = matrix(sparse([ df_factor_exposure_bnd_matrix]))
-# else:
-#     G0 = matrix(sparse([asset_sub, Group_sub]))
-#     h0 = matrix(sparse([df_asset_bnd_matrix, df_group_bnd_matrix]))
-# G0 = matrix(sparse([asset_sub, Group_sub]))
-# h0 = matrix(sparse([df_asset_bnd_matrix, df_group_bnd_matrix]))
+def set_lower_limit(x, multiplier=0.1):
+    if x >= 0:
+        return x*(1 - multiplier)
+    else:
+        return x*(1 + multiplier)
 
-# sol = solvers.qp(P, q, G0, h0, A, b)
-# df_opts_weight = pd.DataFrame(np.array(sol['x']).T,
-#                               columns=idx_level_1_value,
-#                               index=[target_date])
-# logger.debug('solution is %s ', sol['status'])
-# logger.debug("target return: %s", target_return)
-# logger.debug("all weight are bigger than 0? %s", (df_opts_weight>0).all().all())
-# logger.debug("all weight are smaller than 1? %s", (df_opts_weight<=1).all().all())
-# logger.debug("weight sum smaller than 0: %s", df_opts_weight[df_opts_weight<0].sum(1))
 
-# df_opts_weight
+df_factor_exposure_bound = pd.DataFrame(index=exposure_constraint.columns, columns=[['lower', 'upper']])
+df_factor_exposure_bound.lower = exposure_constraint.ix[-1].apply(lambda x: set_lower_limit(x))
+df_factor_exposure_bound.upper = exposure_constraint.ix[-1].apply(lambda x: set_upper_limit(x))
 
-# Long only portfolio optimization.
+df_factor_exposure_lower_bnd = pd.DataFrame(data=[[big_X.values.min()]]*len(all_factors), index=big_X.columns)
+df_factor_exposure_upper_bnd = pd.DataFrame(data=[[big_X.values.max()]]*len(all_factors), index=big_X.columns)
+
+df_factor_exposure_lower_bnd.ix[df_factor_exposure_bound.index] = df_factor_exposure_bound.lower.values.reshape((len(df_factor_exposure_bound),1))
+df_factor_exposure_upper_bnd.ix[df_factor_exposure_bound.index] = df_factor_exposure_bound.upper.values.reshape((len(df_factor_exposure_bound),1))
+
+
 import cvxpy as cvx
+# Factor model portfolio optimization.
 w = cvx.Variable(noa)
+f = big_X.T.values*w
 gamma = cvx.Parameter(sign='positive')
-ret = w.T*rets_mean.values 
-risk = cvx.quad_form(w, cov_matrix_V.values)
-prob = cvx.Problem(cvx.Maximize(ret - gamma*risk), 
-               [cvx.sum_entries(w) == 1,
-                w >= 0])
+Lmax = cvx.Parameter()
+ret = w.T * rets_mean.values
+risk = cvx.quad_form(f, cov_matrix.values) + cvx.quad_form(w, delta.values)
 
-SAMPLES = 100
-risk_data = np.zeros(SAMPLES)
-ret_data = np.zeros(SAMPLES)
-gamma_vals = np.logspace(-2, 3, num=SAMPLES)
+F_lower = cvx.Variable(len(all_factors))
 
-for i in range(SAMPLES):
-    gamma.value = gamma_vals[i]
-    prob.solve()
-    risk_data[i] = cvx.sqrt(risk).value
-    ret_data[i] = ret.value
+prob_factor = cvx.Problem(cvx.Maximize(- gamma*risk),
+                          [cvx.sum_entries(w) == 1,
+                           cvx.norm(w, 1) <= Lmax,
+                           f >= df_factor_exposure_lower_bnd.values,
+                           f <= df_factor_exposure_upper_bnd.values])
 
-# Plot long only trade-off curve.
-import matplotlib.pyplot as plt
-# #%matplotlib inline
-# #%config InlineBackend.figure_format = 'svg'
+# Solve the factor model problem.
+Lmax.value = 1
+gamma.value = 1
+prob_factor.solve(verbose=True)
 
-markers_on = [29, 40]
-fig = plt.figure()
-ax = fig.add_subplot(111)
-plt.plot(risk_data, ret_data, 'g-')
-for marker in markers_on:
-    plt.plot(risk_data[marker], ret_data[marker], 'bs')
-    ax.annotate(r"$\gamma = %.2f$" % gamma_vals[marker], xy=(risk_data[marker]+.08, ret_data[marker]-.03))
-for i in range(noa):
-    plt.plot(cvx.sqrt(cov_matrix_V.iloc[i,i]).value, rets_mean[i], 'ro')
-plt.xlabel('Standard deviation')
-plt.ylabel('Return')
-plt.show()
+df_opts_weight = pd.DataFrame(np.array(w.value).T,
+                              columns=target_symbols,
+                              index=[target_date])
+logger.debug(prob_factor.status)
+logger.debug("target return: %s", target_return)
+logger.debug("all weight are bigger than 0? %s", (df_opts_weight>0).all().all())
+logger.debug("all weight are smaller than 1? %s", (df_opts_weight<=1).all().all())
+logger.debug("weight sum smaller than 0: %s", df_opts_weight[df_opts_weight<0].sum(1))
+
+logger.debug(df_opts_weight)
