@@ -266,7 +266,7 @@ asset_weights.date = target_date
 exposure_constraint = x10.asColumnTab()
 exposure_constraint = exposure_constraint.pivot(
     index='date', columns='index', values='Wb')
-position_limit = 200
+position_limit = 58
 if asset_constraint is not None:
     asset_constraint = asset_constraint.asMatrix()
 if group_constraint is not None:
@@ -308,11 +308,10 @@ if position_limit > len(target_symbols):
     logger.debug("position limit is bigger than total symbols.")
     position_limit = len(target_symbols)
 
-solvers.options['show_progress'] = True
 # get random symbols at the target position limit
-arr = list(range(len(target_symbols)))
-np.random.shuffle(arr)
-target_symbols = target_symbols[arr[:position_limit]]
+#arr = list(range(len(target_symbols)))
+#np.random.shuffle(arr)
+#target_symbols = target_symbols[arr[:position_limit]]
 
 df_industries_asset_target_init_weight = df_industries_asset_init_weight.\
                                          loc[df_industries_asset_init_weight['symbol'].isin(target_symbols)]
