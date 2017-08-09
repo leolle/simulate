@@ -384,31 +384,73 @@ import cvxpy as cvx
 # Factor model portfolio optimization.
 w = cvx.Variable(noa)
 f = big_X.T.values*w
+# f = big_X.loc[:,exposure_constraint.columns].T.values*w
 gamma = cvx.Parameter(sign='positive')
 Lmax = cvx.Parameter()
 ret = w.T * rets_mean.values
+# risk = cvx.quad_form(f, cov_matrix.loc[exposure_constraint.columns,exposure_constraint.columns].values) + cvx.quad_form(w, delta.values)
 risk = cvx.quad_form(f, cov_matrix.values) + cvx.quad_form(w, delta.values)
+#ret = mu.T*w
+# for group weight constraint
+groups = df_pivot_industries_asset_weights.groupby(
+    axis=1, level=0, sort=False, group_keys=False).count().\
+    iloc[-1, :].values
+num_group = len(groups)
+num_asset = np.sum(groups)
+logger.debug('number of assets in groups: %s', groups)
+logger.debug('number of groups: %s', num_group)
 
-F_lower = cvx.Variable(len(all_factors))
+G_sparse_list = []
+for i in range(num_group):
+    for j in range(groups[i]):
+        G_sparse_list.append(i)
+Group_sub = spmatrix(1.0, G_sparse_list, range(num_asset))
 
-prob_factor = cvx.Problem(cvx.Maximize(- gamma*risk),
-                          [cvx.sum_entries(w) == 1,
-                           cvx.norm(w, 1) <= Lmax,
-                           f >= df_factor_exposure_lower_bnd.values,
-                           f <= df_factor_exposure_upper_bnd.values])
+G = np.array(Group_sub)
+G_sum = np.array(matrix(Group_sub))*w
 
-# Solve the factor model problem.
+
+# f == exposure_constraint.ix[-1].values.reshape(-1, 1)
+
+eq_constraint = [cvx.sum_entries(w) == 1,
+                 cvx.norm(w, 1) <= Lmax]
+l_eq_constraint = [w >= df_asset_weight.lower.values,
+                   w <= df_asset_weight.upper.values,
+                   G_sum >= df_group_weight.lower.values,
+                   G_sum <= df_group_weight.upper.values]
+if exposure_constraint is not None:
+    l_eq_constraint.append(f >= df_factor_exposure_lower_bnd.values)
+    l_eq_constraint.append(f <= df_factor_exposure_upper_bnd.values)
+target_mode = 2
+target_return = -0.0006992348944336906
 Lmax.value = 1
 gamma.value = 1
+if target_mode == 0:
+    # Solve the factor model problem.
+    prob_factor = cvx.Problem(cvx.Maximize(-gamma*risk),
+                              l_eq_constraint)
+if target_mode == 1:
+    # minimum risk subject to target return, Markowitz Mean_Variance Portfolio
+    prob_factor = cvx.Problem(cvx.Maximize(-gamma*risk),
+                              [ret >= target_return]+l_eq_constraint)
+if target_mode == 2:
+    # Portfolio optimization with a leverage limit and a bound on risk
+    prob_factor = cvx.Problem(cvx.Maximize(ret),
+                              [risk <= target_risk]+l_eq_constraint)
 prob_factor.solve(verbose=True)
-
 df_opts_weight = pd.DataFrame(np.array(w.value).T,
-                              columns=target_symbols,
+                              columns=idx_level_1_value,
                               index=[target_date])
 logger.debug(prob_factor.status)
 logger.debug("target return: %s", target_return)
-logger.debug("all weight are bigger than 0? %s", (df_opts_weight>0).all().all())
-logger.debug("all weight are smaller than 1? %s", (df_opts_weight<=1).all().all())
-logger.debug("weight sum smaller than 0: %s", df_opts_weight[df_opts_weight<0].sum(1))
-
+logger.debug("all weight are bigger than 0? %s",
+             (df_opts_weight > 0).all().all())
+logger.debug("all weight are smaller than 1? %s",
+             (df_opts_weight <= 1).all().all())
+logger.debug("weight sum smaller than 0: %s",
+             df_opts_weight[df_opts_weight < 0].sum(1))
 logger.debug(df_opts_weight)
+handler.close()
+logger.removeHandler(handler)
+while logger.handlers:
+     logger.handlers.pop()
