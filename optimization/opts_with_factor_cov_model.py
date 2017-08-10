@@ -9,6 +9,7 @@ import logging
 import numpy as np
 import pandas as pd
 import re
+import cvxpy as cvx
 
 from cvxopt import matrix, solvers, spmatrix, sparse
 from cvxopt.blas import dot
@@ -263,9 +264,11 @@ asset_return = x3.asMatrix()
 asset_weights = x4.asColumnTab()
 target_date = pd.to_datetime(target_date)
 asset_weights.date = target_date
-exposure_constraint = x10.asColumnTab()
-exposure_constraint = exposure_constraint.pivot(
-    index='date', columns='index', values='Wb')
+if exposure_constraint is not None:
+    exposure_constraint = x10.asColumnTab()
+    exposure_constraint = exposure_constraint.pivot(index='date',
+                                                    columns='index',
+                                                    values='Wb')
 position_limit = 58
 if asset_constraint is not None:
     asset_constraint = asset_constraint.asMatrix()
@@ -380,7 +383,7 @@ df_factor_exposure_lower_bnd.ix[df_factor_exposure_bound.index] = df_factor_expo
 df_factor_exposure_upper_bnd.ix[df_factor_exposure_bound.index] = df_factor_exposure_bound.upper.values.reshape((len(df_factor_exposure_bound),1))
 
 
-import cvxpy as cvx
+target_mode = 2
 # Factor model portfolio optimization.
 w = cvx.Variable(noa)
 f = big_X.T.values*w
@@ -409,7 +412,6 @@ Group_sub = spmatrix(1.0, G_sparse_list, range(num_asset))
 G = np.array(Group_sub)
 G_sum = np.array(matrix(Group_sub))*w
 
-
 # f == exposure_constraint.ix[-1].values.reshape(-1, 1)
 
 eq_constraint = [cvx.sum_entries(w) == 1,
@@ -421,7 +423,6 @@ l_eq_constraint = [w >= df_asset_weight.lower.values,
 if exposure_constraint is not None:
     l_eq_constraint.append(f >= df_factor_exposure_lower_bnd.values)
     l_eq_constraint.append(f <= df_factor_exposure_upper_bnd.values)
-target_mode = 2
 target_return = -0.0006992348944336906
 Lmax.value = 1
 gamma.value = 1

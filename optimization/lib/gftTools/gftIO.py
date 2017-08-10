@@ -26,6 +26,17 @@ def getCacheHeader():
 cacheHeader = getCacheHeader()
 
 
+def oSet2Hex(oSet):
+    ret = oSet.astype(oDataType)
+    return np.apply_along_axis(intTuple2Str, 1, ret)
+
+
+def intTuple2Str(tup2Int):
+    str1 = int.to_bytes(int(tup2Int[0][0]), 8, "big").hex()
+    str2 = int.to_bytes(int(tup2Int[0][1]), 8, "big").hex()
+    return str1+str2
+
+
 def dump4CacheSever(value, timestamp, filename):
     dps = pickle.dumps(value, -1)
     zDps = zlib.compress(dps, 9)
@@ -783,3 +794,5 @@ class LongTable2Readable:  # long table means OnTnVn, or OOTV
             else:
                 result.append(column)
         return result
+
+
