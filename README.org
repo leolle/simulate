@@ -20,6 +20,42 @@
 
 #+END_SRC
 
+** transfer:
+#+BEGIN_SRC python
+
+import pickle, zlib
+# b char array to Chinese
+def transformDictWithMap(dic, namemap):
+    resultDict = dict()
+    for key, value in dic.items():
+        try:
+            resultDict[key] = transformData4Name(value, namemap)
+        except Exception:
+            print("transform " + key + ' failed')
+            return
+    return resultDict
+
+
+def transformDict4Name(dic):
+    with open("/home/gft/work/lib/gftTools/symbols.pkl", "rb") as fpz:
+        value = fpz.read()
+        namemap = pickle.loads(value)
+    return transformData4Name(dic, namemap)
+
+# b char array to 32 bit hex
+def intTuple2Str(tup2Int):
+    str1 = int.to_bytes(int(tup2Int[0][0]), 8, "big").hex()
+    str2 = int.to_bytes(int(tup2Int[0][1]), 8, "big").hex()
+    return str1+str2
+
+
+def oSet2Hex(oSet):
+    ret = oSet.astype(oDataType)
+    return np.apply_along_axis(intTuple2Str, 1, ret.reshape(-1, 1))
+
+transformDict4Name(x10.asMatrix())
+
+#+END_SRC
 * 功能：
 ** 3种模式：
 Portfolios are points from a feasible set of assets that constitute an asset universe. A portfolio specifies either holdings or weights in each individual asset in the asset universe. The convention is to specify portfolios in terms of weights, although the portfolio optimization tools work with holdings as well.
