@@ -264,3 +264,6 @@ minimize loss function using sci.optmize.minimize
 ** Objective frontiers
 can be used to create a classical mean variance frontier or to explore trade-offs, such as return vs. transaction costs or risk vs. tax liability.
 ** TODO change target date optimization to multi-period optimization at seleting df_assets symbols.
+** pack factor exposure to pandas panel
+** make forecasted return for each asset
+** add group factor exposure

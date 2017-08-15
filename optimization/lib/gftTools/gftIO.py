@@ -1,3 +1,5 @@
+# -*- coding: utf-8 -*-
+
 import pickle, zlib
 import numpy as np
 import pandas as pd
@@ -24,17 +26,6 @@ def getCacheHeader():
 
 
 cacheHeader = getCacheHeader()
-
-
-def oSet2Hex(oSet):
-    ret = oSet.astype(oDataType)
-    return np.apply_along_axis(intTuple2Str, 1, ret)
-
-
-def intTuple2Str(tup2Int):
-    str1 = int.to_bytes(int(tup2Int[0][0]), 8, "big").hex()
-    str2 = int.to_bytes(int(tup2Int[0][1]), 8, "big").hex()
-    return str1+str2
 
 
 def dump4CacheSever(value, timestamp, filename):
@@ -100,12 +91,12 @@ def convertColumnTabl2Matrix(columnTab):
         if (columnTab[colName].dtype == np.float64):
             if vName is None:
                 vName = colName
+        if istimestamparray(np.array(columnTab[colName])):
+            if tName is None:
+                tName = colName
         if (columnTab[colName].dtype == np.object):
             if oName is None:
                 oName = colName
-        else:
-            if tName is None:
-                tName = colName
 
     if vName is None:
         raise Exception("v Name is None")
@@ -364,9 +355,11 @@ def transformCppInput(data, parType):
         dataDict = transformOTInColumnTable(data)
         data = pd.DataFrame(dataDict)
         return GftTable.fromColumnTable(data, columnOrders)
-    if parType == PARAMETER_TYPE_OBJECT_SET or parType == PARAMETER_TYPE_FREQUENCY:
+    if parType == PARAMETER_TYPE_FREQUENCY:
         tArr = transformTime4Input(data)
         return pd.DatetimeIndex(data=tArr, copy=False)
+    if parType == PARAMETER_TYPE_OBJECT_SET:
+        return transformO4Input(data)
     if parType == PARAMETER_TYPE_TIMESTAMP:
         # 62091 is the difference between 1970-01-01 and 1800-01-01
         data = data - 62091
@@ -510,6 +503,10 @@ def gidStrArray2CharArray(gid_arr: np.array):
     # transform int pair two bytes
     return np.chararray(shape=(d2.shape[0]), itemsize=16, buffer=d2.data)
 
+def intTuple2Str(tup2Int):
+    str1 = int.to_bytes(int(tup2Int[0][0]),8,"big").hex()
+    str2 = int.to_bytes(int(tup2Int[0][1]), 8, "big").hex()
+    return str1+str2
 
 def strSet2Np(gid_arr: np.array):
     return gidStrArray2CharArray(gid_arr)
@@ -521,7 +518,7 @@ def testGidStr2Np():
     strSet2Np(strArr)
 
 
-# use this to string charArray to string
+# use this to transform charArray to string
 def gidInt2Str(gid):
     if gid.__len__ == 0:
         return "GFT"
@@ -720,7 +717,6 @@ def slice_table_inplace(gft_table: GftTable, begin_time: pd.Timestamp, end_time:
             (gft_table.matrix.index > begin_time) & (gft_table.matrix.index <= end_time)]
         gft_table.matrix = sliced_matrix
 
-
 def wrap_gfttable_dataframe_clean_gid(obj):
     global inst_gid
     ret = wrap_gfttable_dataframe_with_gid(obj, inst_gid)
@@ -763,6 +759,12 @@ def _longFrameToList(obj):
     return alist
 
 
+#use this to transfor oSet -> readable hex string array
+def oSet2HexStr(oSet):
+    ret = oSet.astype(oDataType)
+    return np.apply_along_axis(intTuple2Str, 1, ret)
+
+
 def _wideFrameToTuple(obj):
     objT = obj.transpose()
     ls_index = transformOFromPandas2Output(objT.index.values)
@@ -796,3 +798,18 @@ class LongTable2Readable:  # long table means OnTnVn, or OOTV
         return result
 
 
+def intTuple2Str(tup2Int):
+    """
+    convert tuple to 32bit hex
+    """
+    str1 = int.to_bytes(int(tup2Int[0][0]), 8, "big").hex()
+    str2 = int.to_bytes(int(tup2Int[0][1]), 8, "big").hex()
+    return str1+str2
+
+
+def oSet2Hex(oSet):
+    """
+    convert array to 32 bit hex array
+    """
+    ret = oSet.astype(oDataType)
+    return np.apply_along_axis(intTuple2Str, 1, ret.reshape(-1, 1))
