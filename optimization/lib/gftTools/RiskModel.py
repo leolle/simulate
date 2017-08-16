@@ -15,28 +15,34 @@ class RiskAnlysis(object):
     """ risk data preparation and getting attribute. """
     def __init__(self, risk_model_merge):
         self.risk_model = risk_model_merge
+        self.ls_factors = [x for x in risk_model_merge.keys() if
+                           re.match("[A-Z0-9]{32}$", x)]
 
-    def get_factor_exposure(self, date, frequency, symbols, factors):
-        """ Return factor exposure matrix(big X).
+    def get_factor_exposure(self, factor_list, date, symbols):
+        ''' Return factor exposure matrix(big X).
 
-        Keyword Arguments:
-        date       --
-        frequency  --
-        factors    --
+        Parameters
+        ----------
+        risk_model: dictionary
+            Including specific risk, different factor exposure dataframe for all
+            symbols.
+
+        factor_list: list
+            Factor exposure list.
 
         Returns
         -------
         factor_exposure: DataFrame
             Big X on target date for input symbols.
-        """
+        '''
         factor_exposure = pd.DataFrame(index=symbols)
-        for factor in factors:
+        for factor in factor_list:
             try:
                 factor_exposure[factor] = self.risk_model[factor].asMatrix().\
                                           loc[date, symbols]
             except KeyError:
                 factor_exposure[factor] = np.nan
-
+                # raise KeyError('invalid input date: %s' % date)
         factor_exposure.columns = gftIO.strSet2Np(factor_exposure.columns.
                                                   values)
         factor_exposure = factor_exposure.fillna(0)
@@ -47,11 +53,13 @@ class RiskAnlysis(object):
         """ Get assets factor exposure.
         F = w^T * exposure
         Keyword Arguments:
-        asset_weight -- 
+        asset_weight --
         """
+        if isinstance(factors, dict):
+            ls_factors = factors['factors']
         if isinstance(asset_weight, gftIO.GftTable):
             asset_weight = asset_weight.asMatrix()
-
+            # asset_weight.fillna('ffill', inplace=True)
         # resample asset weight by monthly
         if frequency == 'MONTHLY':
             asset_weight.index.name = 'index'
@@ -59,21 +67,20 @@ class RiskAnlysis(object):
             asset_weight = asset_weight.reset_index().groupby(m).last().set_index('index')
             asset_weight.index.name = ''
 
-        factor_exposure = pd.Panel({target_date: self.get_factor_exposure(
-            self.risk_model, factors['factors'], target_date,
-            asset_weight.columns).T for target_date in asset_weight.index})
+        asset_factor_exposure = pd.Panel({target_date: self.get_factor_exposure(
+            ls_factors, target_date, asset_weight.columns).T for target_date in asset_weight.index})
         factor_exposure = pd.DataFrame(index=asset_weight.index,
-                                       columns=factor_exposure.major_axis)
+                                       columns=asset_factor_exposure.major_axis)
         for target_date in asset_weight.index:
-            factor_exposure.ix[target_date] = factor_exposure.ix[target_date].dot(asset_weight.ix[target_date].fillna(0))
+            factor_exposure.ix[target_date] = asset_factor_exposure.ix[target_date].dot(
+                asset_weight.ix[target_date].fillna(0))
         return factor_exposure.replace(0, np.nan).fillna(method='ffill')
-
 
     def specific_risk(self, date, symbols):
         """ get specific risk from risk model
 
         Keyword Arguments:
-        date -- 
+        date --
         """
         # find the nearest date next to target date from specific risk
         specific_risk = self.risk_model['specificRisk'].pivot(
@@ -87,7 +94,6 @@ class RiskAnlysis(object):
 
         return target_specific_risk
 
-
     def delta(self, date, symbols):
         """
         create delta matrix from specific risk
@@ -98,6 +104,17 @@ class RiskAnlysis(object):
         diag = self.specific_risk(date, symbols)
         delta = pd.DataFrame(np.diag(diag), index=diag.index,
                              columns=diag.index).fillna(0)
+
+        return delta
+
+    def covariance_matrix(self, date, factors):
+        """
+        Keyword Arguments:
+        date    -- 
+        factors -- 
+        """
+        pass
+
 
 
 # logger = logging.getLogger()
@@ -119,3 +136,48 @@ class RiskAnlysis(object):
 # RiskModel = RiskAnlysis(risk_model)
 # RiskModel.factor_exposure(asset_weight, frequency, factors)
 
+def get_factor_exposure(risk_model, factor_list, date, symbols):
+    ''' Return factor exposure matrix(big X).
+
+    Parameters
+    ----------
+    risk_model: dictionary
+        Including specific risk, different factor exposure dataframe for all
+        symbols.
+
+    factor_list: list
+        Factor exposure list.
+
+    Returns
+    -------
+    factor_exposure: DataFrame
+        Big X on target date for input symbols.
+    '''
+    factor_exposure = pd.DataFrame(index=symbols)
+    for factor in factor_list:
+        try:
+            factor_exposure[factor] = risk_model[factor].asMatrix().\
+                                      loc[date, symbols]
+        except KeyError:
+            factor_exposure[factor] = np.nan
+            # raise KeyError('invalid input date: %s' % date)
+    factor_exposure.columns = gftIO.strSet2Np(factor_exposure.columns.values)
+    factor_exposure = factor_exposure.fillna(0)
+
+    return factor_exposure
+
+
+def FactorExposure(risk_model, begin_date, end_date, frequency,
+                   asset_weight, factors):
+    """ to get benchmark factor exposure """
+    asset_weight = asset_weight.asMatrix()
+    if frequency == 'MONTHLY':
+        m = asset_weight.index.to_period('m')
+        benchmark_weight = asset_weight.reset_index().groupby(m).last().set_index('index')
+        benchmark_weight.index.name = ''
+    risk_model_exposure = pd.Panel({target_date: get_factor_exposure(risk_model, factors['factors'], target_date,
+                            asset_weight.columns).T for target_date in asset_weight.index})
+    factor_exposure = pd.DataFrame(index=benchmark_weight.index, columns=risk_model_exposure.major_axis)
+    for target_date in benchmark_weight.index:
+        factor_exposure.ix[target_date] = risk_model_exposure.ix[target_date].dot(benchmark_weight.ix[target_date].fillna(0))
+    return factor_exposure.replace(0, np.nan).fillna(method='ffill')
