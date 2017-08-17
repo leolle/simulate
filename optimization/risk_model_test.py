@@ -118,12 +118,12 @@ class RiskAnlysis(object):
         symbols -- 
         """
         # diag = self.specific_risk()
-        specific_risk = self.specific_risk()
-        date_index = specific_risk.index
-        ls_symbols = specific_risk.columns
-        delta = pd.Panel({date: pd.DataFrame(np.diag(specific_risk.loc[date]),
-                                             index=specific_risk.loc[date].index,
-                                             columns=specific_risk.loc[date].index).fillna(0)
+        risk = self.specific_risk()
+        date_index = risk.index
+        ls_symbols = risk.columns
+        delta = pd.Panel({date: pd.DataFrame(np.diag(risk.loc[date]),
+                                             index=risk.loc[date].index,
+                                             columns=risk.loc[date].index).fillna(0)
                           for date in date_index})
         # delta = pd.DataFrame(np.diag(diag), index=diag.index,
         #                     columns=diag.index).fillna(0)
@@ -152,3 +152,13 @@ class RiskAnlysis(object):
 RiskModel = RiskAnlysis(risk_model)
 RiskModel.factor_exposure(asset_weight, frequency, factors)
 RiskModel.factor_return()
+
+specific_risk = risk_model['specificRisk'].pivot(
+        index='date', columns='symbol', values='specificrisk')
+date_index = specific_risk.index
+ls_symbols = specific_risk.columns
+
+delta = pd.Panel({date: pd.DataFrame(np.diag(specific_risk.loc[date]),
+                                     index=specific_risk.loc[date].index,
+                                     columns=specific_risk.loc[date].index).fillna(0)
+                  for date in date_index})
