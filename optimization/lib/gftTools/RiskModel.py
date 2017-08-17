@@ -17,6 +17,8 @@ class RiskAnlysis(object):
         self.risk_model = risk_model_merge
         self.ls_factors = [x for x in risk_model_merge.keys() if
                            re.match("[A-Z0-9]{32}$", x)]
+        self.ls_factors_ret = [x for x in risk_model_merge.keys() if
+                               re.search(".ret$", x)]
 
     def get_factor_exposure(self, factor_list, date, symbols):
         ''' Return factor exposure matrix(big X).
@@ -115,69 +117,12 @@ class RiskAnlysis(object):
         """
         pass
 
+    def factor_return(self):
+        """ get factor return from all the factors """
 
+        factors_ret = pd.DataFrame(index=self.risk_model[self.ls_factors_ret[0]].index,
+                                   columns=self.ls_factors_ret)
+        for factor in self.ls_factors_ret:
+            factors_ret[factor] = self.risk_model[factor]
 
-# logger = logging.getLogger()
-# handler = logging.StreamHandler()
-# formatter = logging.Formatter('%(asctime)s %(name)-12s %(levelname)-8s %(message)s')
-# handler.setFormatter(formatter)
-# logger.addHandler(handler)
-# logger.setLevel(logging.DEBUG)
-
-# logger.debug('start')
-# risk_model = gftIO.zload("/home/weiwu/share/optimize/x2.pkl")
-# asset_weight = gftIO.zload("/home/weiwu/share/optimize/asset_weight.pkl")
-# begin_date = gftIO.zload("/home/weiwu/share/optimize/begin_date.pkl")
-# end_date = gftIO.zload("/home/weiwu/share/optimize/end_date.pkl")
-# frequency = gftIO.zload("/home/weiwu/share/optimize/frequency.pkl")
-# factors = gftIO.zload("/home/weiwu/share/optimize//factors.pkl")
-
-# logger.debug('data loaded')
-# RiskModel = RiskAnlysis(risk_model)
-# RiskModel.factor_exposure(asset_weight, frequency, factors)
-
-def get_factor_exposure(risk_model, factor_list, date, symbols):
-    ''' Return factor exposure matrix(big X).
-
-    Parameters
-    ----------
-    risk_model: dictionary
-        Including specific risk, different factor exposure dataframe for all
-        symbols.
-
-    factor_list: list
-        Factor exposure list.
-
-    Returns
-    -------
-    factor_exposure: DataFrame
-        Big X on target date for input symbols.
-    '''
-    factor_exposure = pd.DataFrame(index=symbols)
-    for factor in factor_list:
-        try:
-            factor_exposure[factor] = risk_model[factor].asMatrix().\
-                                      loc[date, symbols]
-        except KeyError:
-            factor_exposure[factor] = np.nan
-            # raise KeyError('invalid input date: %s' % date)
-    factor_exposure.columns = gftIO.strSet2Np(factor_exposure.columns.values)
-    factor_exposure = factor_exposure.fillna(0)
-
-    return factor_exposure
-
-
-def FactorExposure(risk_model, begin_date, end_date, frequency,
-                   asset_weight, factors):
-    """ to get benchmark factor exposure """
-    asset_weight = asset_weight.asMatrix()
-    if frequency == 'MONTHLY':
-        m = asset_weight.index.to_period('m')
-        benchmark_weight = asset_weight.reset_index().groupby(m).last().set_index('index')
-        benchmark_weight.index.name = ''
-    risk_model_exposure = pd.Panel({target_date: get_factor_exposure(risk_model, factors['factors'], target_date,
-                            asset_weight.columns).T for target_date in asset_weight.index})
-    factor_exposure = pd.DataFrame(index=benchmark_weight.index, columns=risk_model_exposure.major_axis)
-    for target_date in benchmark_weight.index:
-        factor_exposure.ix[target_date] = risk_model_exposure.ix[target_date].dot(benchmark_weight.ix[target_date].fillna(0))
-    return factor_exposure.replace(0, np.nan).fillna(method='ffill')
+        return factors_ret
