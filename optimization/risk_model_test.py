@@ -71,8 +71,7 @@ class RiskAnlysis(object):
         return factor_exposure
 
     def factor_exposure(self, asset_weight, frequency, factors):
-        """ Get assets factor exposure.
-        F = w^T * exposure
+        """ Get factor exposure.
         Keyword Arguments:
         asset_weight --
         """
@@ -90,10 +89,23 @@ class RiskAnlysis(object):
 
         asset_factor_exposure = pd.Panel({target_date: self.get_factor_exposure(
             ls_factors, target_date, asset_weight.columns).T for target_date in asset_weight.index})
+
+        return asset_factor_exposure
+
+    def cal_factor_exposure(self, asset_weight, frequency, factors):
+        """ calculate asset factor exposure
+        F = w^T * exposure
+
+        Keyword Arguments:
+        asset_weight -- 
+        frequency    -- 
+        factors      -- 
+        """
+        pn_factor_exposure = self.factor_exposure(asset_weight, frequency, factors)
         factor_exposure = pd.DataFrame(index=asset_weight.index,
-                                       columns=asset_factor_exposure.major_axis)
+                                       columns=pn_factor_exposure.major_axis)
         for target_date in asset_weight.index:
-            factor_exposure.ix[target_date] = asset_factor_exposure.ix[target_date].dot(
+            factor_exposure.ix[target_date] = pn_factor_exposure.ix[target_date].dot(
                 asset_weight.ix[target_date].fillna(0))
         return factor_exposure.replace(0, np.nan).fillna(method='ffill')
 
