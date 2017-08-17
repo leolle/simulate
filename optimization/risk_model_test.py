@@ -110,7 +110,7 @@ class RiskAnlysis(object):
 
         return specific_risk
 
-    def delta(self):
+    def delta(self, date, symbols):
         """
         create delta matrix from specific risk
         Keyword Arguments:
@@ -119,14 +119,9 @@ class RiskAnlysis(object):
         """
         # diag = self.specific_risk()
         risk = self.specific_risk()
-        date_index = risk.index
-        ls_symbols = risk.columns
-        delta = pd.Panel({date: pd.DataFrame(np.diag(risk.loc[date]),
-                                             index=risk.loc[date].index,
-                                             columns=risk.loc[date].index).fillna(0)
-                          for date in date_index})
-        # delta = pd.DataFrame(np.diag(diag), index=diag.index,
-        #                     columns=diag.index).fillna(0)
+        diag = risk.loc[date, symbols]
+        delta = pd.DataFrame(np.diag(diag), index=diag.index,
+                             columns=diag.index).fillna(0)
 
         return delta
 
@@ -158,7 +153,7 @@ specific_risk = risk_model['specificRisk'].pivot(
 date_index = specific_risk.index
 ls_symbols = specific_risk.columns
 
-delta = pd.Panel({date: pd.DataFrame(np.diag(specific_risk.loc[date]),
-                                     index=specific_risk.loc[date].index,
-                                     columns=specific_risk.loc[date].index).fillna(0)
-                  for date in date_index})
+# delta = pd.Panel({date: pd.DataFrame(np.diag(specific_risk.loc[date]),
+#                                      index=specific_risk.loc[date].index,
+#                                      columns=specific_risk.loc[date].index).fillna(0)
+#                   for date in date_index})
