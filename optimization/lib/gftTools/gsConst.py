@@ -79,4 +79,20 @@ class Const(BaseConst):
     #BELOW IS FOR MACHINE LEARNING
     WINDOW_SIZE = 5
     TOTAL_BINS = 10
+    df_data = "result"
+    num_mean_accuracy = "mean_accuracy"
+    dict_score = "scores"
+    rsquare = 'rsquare'
+    match_pair_pct = 'match_pair_pct'
+    max_depth = 'max_depth'
  
+    #Below is for Brinson Attribution
+    portweight = 'portweight'
+    bmweight = 'bmweight'
+    portfolio_length = 'portfolio_length'
+    benchmark_length = 'benchmark_length'
+
+    # portfolio optimization mode
+    MinimumRisk = 0
+    MinimumRiskUnderReturn = 1
+    MaximumReturnUnderRisk = 2
