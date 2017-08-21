@@ -154,6 +154,20 @@ def find_nearest(array, value):
     return idx
 
 
+def set_upper_limit(x, multiplier=0.1):
+    if x >= 0:
+        return x*(1 + multiplier)
+    else:
+        return x*(1 - multiplier)
+
+
+def set_lower_limit(x, multiplier=0.1):
+    if x >= 0:
+        return x*(1 - multiplier)
+    else:
+        return x*(1 + multiplier)
+
+
 logger = logging.getLogger()
 handler = logging.StreamHandler()
 formatter = logging.Formatter('%(asctime)s %(name)-12s %(levelname)-8s %(message)s')
@@ -193,7 +207,7 @@ if isinstance(x10, gftIO.GftTable):
     exposure_constraint = exposure_constraint.pivot(index='idname',
                                                     columns='variable',
                                                     values='value')
-# position_limit = 58
+# 数据格式转换
 if isinstance(asset_constraint, gftIO.GftTable):
     asset_constraint = asset_constraint.asMatrix()
 if isinstance(group_constraint, gftIO.GftTable):
@@ -293,19 +307,6 @@ df_asset_weight = pd.DataFrame({'lower': [0.0], 'upper': [1.0]},
 df_group_weight = pd.DataFrame({'lower': [0.0], 'upper': [1.0]},
                                index=idx_level_0_value)
 
-def set_upper_limit(x, multiplier=0.1):
-    if x >= 0:
-        return x*(1 + multiplier)
-    else:
-        return x*(1 - multiplier)
-
-
-def set_lower_limit(x, multiplier=0.1):
-    if x >= 0:
-        return x*(1 - multiplier)
-    else:
-        return x*(1 + multiplier)
-
 
 df_factor_exposure_bound = pd.DataFrame(index=exposure_constraint.columns, columns=[['lower', 'upper']])
 df_factor_exposure_bound.lower = exposure_constraint.ix[-1].apply(lambda x: set_lower_limit(x))
@@ -355,21 +356,22 @@ if not exposure_constraint:
     l_eq_constraint.append(f >= df_factor_exposure_lower_bnd.values)
     l_eq_constraint.append(f <= df_factor_exposure_upper_bnd.values)
 target_return = -0.0006992348944336906
+# leverage level and risk adjusted parameter
 Lmax.value = 1
 gamma.value = 1
 if target_mode == gsConst.Const.MinimumRisk:
-    # Solve the factor model problem.
+    # maximize negative product of gamma and risk
     prob_factor = cvx.Problem(cvx.Maximize(-gamma*risk),
-                              l_eq_constraint)
+                              eq_constraint+l_eq_constraint)
 if target_mode == gsConst.Const.MinimumRiskUnderReturn:
     # minimum risk subject to target return, Markowitz Mean_Variance Portfolio
     prob_factor = cvx.Problem(cvx.Maximize(-gamma*risk),
-                              [ret >= target_return]+l_eq_constraint)
+                              [ret >= target_return]+eq_constraint+l_eq_constraint)
 if target_mode == gsConst.Const.MaximumReturnUnderRisk:
     # Portfolio optimization with a leverage limit and a bound on risk
     prob_factor = cvx.Problem(cvx.Maximize(ret),
-                              [risk <= target_risk]+l_eq_constraint)
-prob_factor.solve(verbose=True)
+                              [risk <= target_risk]+eq_constraint+l_eq_constraint)
+prob_factor.solve(verbose=False)
 df_opts_weight = pd.DataFrame(np.array(w.value).T,
                               columns=idx_level_1_value,
                               index=[target_date])
@@ -377,14 +379,14 @@ dict_opts_status = {}
 dict_opts_status[target_date] = prob_factor.status
 
 logger.debug(prob_factor.status)
-logger.debug("target return: %s", target_return)
-logger.debug("all weight are bigger than 0? %s",
-             (df_opts_weight > 0).all().all())
-logger.debug("all weight are smaller than 1? %s",
-             (df_opts_weight <= 1).all().all())
-logger.debug("weight sum smaller than 0: %s",
-             df_opts_weight[df_opts_weight < 0].sum(1))
-logger.debug(df_opts_weight)
+# logger.debug("target return: %s", target_return)
+# logger.debug("all weight are bigger than 0? %s",
+#              (df_opts_weight > 0).all().all())
+# logger.debug("all weight are smaller than 1? %s",
+#              (df_opts_weight <= 1).all().all())
+# logger.debug("weight sum smaller than 0: %s",
+#              df_opts_weight[df_opts_weight < 0].sum(1))
+# logger.debug(df_opts_weight)
 
 
 # target_mode = 2
