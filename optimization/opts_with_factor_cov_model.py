@@ -167,13 +167,13 @@ def set_lower_limit(x, multiplier=0.1):
     else:
         return x*(1 + multiplier)
 
-
 logger = logging.getLogger()
 handler = logging.StreamHandler()
 formatter = logging.Formatter('%(asctime)s %(name)-12s %(levelname)-8s %(message)s')
 handler.setFormatter(formatter)
-logger.addHandler(handler)
-logger.setLevel(logging.DEBUG)
+if not logger.handlers:
+    logger.addHandler(handler)
+    logger.setLevel(logging.DEBUG)
 
 x0 = gftIO.zload("/home/weiwu/share/optimize/x0.pkl")
 x1 = gftIO.zload("/home/weiwu/share/optimize/x1.pkl")
@@ -201,12 +201,10 @@ exposure_constraint = x10
 
 asset_return = x3.asMatrix()
 asset_weight = x4.asColumnTab()
-#asset_weight.date = target_date
-if isinstance(x10, gftIO.GftTable):
-    exposure_constraint = x10.asColumnTab()
-    exposure_constraint = exposure_constraint.pivot(index='idname',
-                                                    columns='variable',
-                                                    values='value')
+if isinstance(exposure_constraint, gftIO.GftTable):
+    factor_exposure_constraint = exposure_constraint.asColumnTab()
+    factor_exposure_constraint = factor_exposure_constraint.pivot(
+        index='idname', columns='variable', values='value')
 # 数据格式转换
 if isinstance(asset_constraint, gftIO.GftTable):
     asset_constraint = asset_constraint.asMatrix()
@@ -220,7 +218,7 @@ logger.debug('parse data finished.')
 
 RiskModel = RiskAnlysis(risk_model)
 
-target_date = exposure_constraint.index[0]
+target_date = factor_exposure_constraint.index[0]
 specific_risk = RiskModel.specific_risk()
 df_industries_asset_weight = asset_weight.drop_duplicates(
     subset=['date', 'symbol'])
@@ -308,15 +306,23 @@ df_group_weight = pd.DataFrame({'lower': [0.0], 'upper': [1.0]},
                                index=idx_level_0_value)
 
 
-df_factor_exposure_bound = pd.DataFrame(index=exposure_constraint.columns, columns=[['lower', 'upper']])
-df_factor_exposure_bound.lower = exposure_constraint.ix[-1].apply(lambda x: set_lower_limit(x))
-df_factor_exposure_bound.upper = exposure_constraint.ix[-1].apply(lambda x: set_upper_limit(x))
+df_factor_exposure_bound = pd.DataFrame(index=factor_exposure_constraint.columns, columns=[['lower', 'upper']])
+df_factor_exposure_bound.lower = factor_exposure_constraint.ix[-1].apply(lambda x: set_lower_limit(x))
+df_factor_exposure_bound.upper = factor_exposure_constraint.ix[-1].apply(lambda x: set_upper_limit(x))
 
 df_factor_exposure_lower_bnd = pd.DataFrame(data=[[big_X.values.min()]]*len(all_factors), index=big_X.columns)
 df_factor_exposure_upper_bnd = pd.DataFrame(data=[[big_X.values.max()]]*len(all_factors), index=big_X.columns)
 
 df_factor_exposure_lower_bnd.ix[df_factor_exposure_bound.index] = df_factor_exposure_bound.lower.values.reshape((len(df_factor_exposure_bound),1))
 df_factor_exposure_upper_bnd.ix[df_factor_exposure_bound.index] = df_factor_exposure_bound.upper.values.reshape((len(df_factor_exposure_bound),1))
+
+df_factor_exposure_bound = pd.DataFrame(index=big_X.columns, columns=[['lower', 'upper']])
+df_factor_exposure_bound.lower = [big_X.values.min()]*len(all_factors)
+df_factor_exposure_bound.upper = [big_X.values.max()]*len(all_factors)
+df_factor_exposure_bound.loc[factor_exposure_constraint.columns, 'lower'] = factor_exposure_constraint.ix[-1].apply(lambda x: set_lower_limit(x))
+df_factor_exposure_bound.loc[factor_exposure_constraint.columns, 'upper'] = factor_exposure_constraint.ix[-1].apply(lambda x: set_upper_limit(x))
+
+
 noa = len(unique_symbol)
 
 target_mode = 0
@@ -348,21 +354,39 @@ G_sum = np.array(matrix(Group_sub))*w
 
 eq_constraint = [cvx.sum_entries(w) == 1,
                  cvx.norm(w, 1) <= Lmax]
+
+
+def constraint(obj, df_limit):
+    if isinstance(df_limit, pd.DataFrame):
+        return [obj >= df_limit.iloc[:, 0].values,
+                obj <= df_limit.iloc[:, 1].values]
+
+
+asset_weight_constraint = constraint(w, df_asset_weight)
+group_weight_constraint = constraint(G_sum, df_group_weight)
+if exposure_constraint:
+    factor_exposure_constraint = constraint(f, df_factor_exposure_bound)
+else:
+    factor_exposure_constraint = None
+
 l_eq_constraint = [w >= df_asset_weight.lower.values,
                    w <= df_asset_weight.upper.values,
                    G_sum >= df_group_weight.lower.values,
                    G_sum <= df_group_weight.upper.values]
-if not exposure_constraint:
+if exposure_constraint:
     l_eq_constraint.append(f >= df_factor_exposure_lower_bnd.values)
     l_eq_constraint.append(f <= df_factor_exposure_upper_bnd.values)
 target_return = -0.0006992348944336906
 # leverage level and risk adjusted parameter
 Lmax.value = 1
 gamma.value = 1
+# target_mode = 0
 if target_mode == gsConst.Const.MinimumRisk:
     # maximize negative product of gamma and risk
     prob_factor = cvx.Problem(cvx.Maximize(-gamma*risk),
-                              eq_constraint+l_eq_constraint)
+                              eq_constraint + asset_weight_constraint +
+                              group_weight_constraint +
+                              factor_exposure_constraint)
 if target_mode == gsConst.Const.MinimumRiskUnderReturn:
     # minimum risk subject to target return, Markowitz Mean_Variance Portfolio
     prob_factor = cvx.Problem(cvx.Maximize(-gamma*risk),
@@ -371,7 +395,7 @@ if target_mode == gsConst.Const.MaximumReturnUnderRisk:
     # Portfolio optimization with a leverage limit and a bound on risk
     prob_factor = cvx.Problem(cvx.Maximize(ret),
                               [risk <= target_risk]+eq_constraint+l_eq_constraint)
-prob_factor.solve(verbose=False)
+prob_factor.solve(verbose=True)
 df_opts_weight = pd.DataFrame(np.array(w.value).T,
                               columns=idx_level_1_value,
                               index=[target_date])
@@ -458,6 +482,6 @@ logger.debug(prob_factor.status)
 #              df_opts_weight[df_opts_weight < 0].sum(1))
 # logger.debug(df_opts_weight)
 # handler.close()
-# logger.removeHandler(handler)
-# while logger.handlers:
-#      logger.handlers.pop()
+logger.removeHandler(handler)
+while logger.handlers:
+     logger.handlers.pop()
