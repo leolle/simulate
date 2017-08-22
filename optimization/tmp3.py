@@ -221,7 +221,7 @@ def CvxOptimizer(context, target_mode, position_limit, risk_model,
                                       values='value')
         cov_matrix = cov_matrix.reindex(all_factors, all_factors, fill_value=np.nan)
 
-        cov_matrix_V = big_X.dot(cov_matrix).dot(big_X.T) + delta    
+        cov_matrix_V = big_X.dot(cov_matrix).dot(big_X.T) + delta
 
         df_asset_weight = pd.DataFrame({'lower': [0.0], 'upper': [1.0]},
                                        index=idx_level_1_value)

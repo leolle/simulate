@@ -39,24 +39,28 @@ data = np.array([[-1.48432831,  0.98625057, -0.47563856],
 F = pd.DataFrame(data, index=symbols, columns=factors)
 factor_exposure = np.array([[-1.48432775],
                             [ 0.98625005],
-                            [-0.47563839]])
+                            [-0.37563839]])
 priority = np.array(range(1,4)).reshape(-1,1)
-
-asset_weight_constraint = constraint(w, df_asset_weight)
-
+number= np.log(np.logspace(.000001, 2))
+status = []
+result = {}
 noa = len(cols)
-w = cvx.Variable(noa)
-f = F.T.values*w
-ret = w.T * logrels(returns).mean().values
-Lmax = cvx.Parameter()
-Lmax.value = 1
-eq_constraint = [cvx.sum_entries(w) == 1,
-                 cvx.norm(w, 1) <= Lmax]
-factor_neutral = [f==np.zeros((3,1))]
-penalty_func = cvx.norm(priority*F.T.values*w, 1)
+N = 100
+mus = [5**(-5.0*t/N) for t in range(N)]
+for n in number:
+    w = cvx.Variable(noa)
+    f = F.T.values*w
+    ret = w.T * logrels(returns).mean().values
+    Lmax = cvx.Parameter()
+    Lmax.value = 1
+    asset_weight_constraint = constraint(w, df_asset_weight)
+    eq_constraint = [cvx.sum_entries(w) == 1,
+                     cvx.norm(w, 1) <= Lmax]
+    factor_neutral = [f==factor_exposure]
+    # factor_neutral = [f==np.zeros((3,1))]
+    penalty_func = n * cvx.norm(F.T.values*w - factor_exposure, 1)
 
-
-
-prob_factor = cvx.Problem(cvx.Maximize(ret - penalty_func), eq_constraint+asset_weight_constraint)
-
-prob_factor.solve(verbose=True)
+    prob_factor = cvx.Problem(cvx.Maximize(ret - penalty_func), eq_constraint+asset_weight_constraint)
+    prob_factor.solve(verbose=False)
+    status.append(prob_factor.status)
+    result[n] = (F.T.values*w.value - factor_exposure)/factor_exposure

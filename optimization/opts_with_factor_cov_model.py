@@ -283,6 +283,16 @@ df_industries_asset_weight = df_industries_asset_weight.dropna(
     axis=0, subset=['industry', 'symbol'], how='any')
 
 unique_symbol = df_industries_asset_weight['symbol'].unique()
+noa = len(unique_symbol)
+# select number of assets to satisfy position limit
+if noa <= position_limit:
+    position_limit = noa
+
+# select assets by returns and volatility according to target mode.
+if target_mode == 1:
+    unique_symbol = asset_return.loc[:target_date, unique_symbol].fillna(0).std().sort_values(ascending=False)[:position_limit].index
+else:
+    unique_symbol = log_ret(asset_return.loc[:target_date,unique_symbol].fillna(0)).mean().sort_values(ascending=False)[:position_limit].index
 
 try:
     if np.setdiff1d(unique_symbol, specific_risk.loc[target_date].index):
@@ -322,7 +332,7 @@ df_factor_exposure_bound.upper = [big_X.values.max()]*len(all_factors)
 df_factor_exposure_bound.loc[factor_exposure_constraint.columns, 'lower'] = factor_exposure_constraint.ix[-1].apply(lambda x: set_lower_limit(x))
 df_factor_exposure_bound.loc[factor_exposure_constraint.columns, 'upper'] = factor_exposure_constraint.ix[-1].apply(lambda x: set_upper_limit(x))
 
-noa = len(unique_symbol)
+
 
 # Factor model portfolio optimization.
 w = cvx.Variable(noa)
