@@ -409,7 +409,7 @@ def ExposureNeutralOpts(context, target_mode, position_limit, risk_model,
         axis=1, level=0, sort=False, group_keys=False).count().\
         iloc[-1, :].values
     num_group = len(groups)
-    num_asset = np.sum(groups)    
+    num_asset = np.sum(groups)
     G_sparse_list = []
     for i in range(num_group):
         for j in range(groups[i]):
