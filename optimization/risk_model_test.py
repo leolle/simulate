@@ -211,17 +211,15 @@ class ExtractDictModelData(object):
         date_index = self.model.get(oset_idx[0], None).asMatrix().index
         ls_factor_b_char = gftIO.strSet2Np(np.array(oset_idx))
         factor_data = pd.Panel({ls_factor_b_char[key]: self.model.get(factor).asMatrix() for key, factor in enumerate(oset_idx)})
-        #factor_data = {key: self.model.get(key, None).asMatrix()
-        #               for key in oset_idx}
+        return factor_data.transpose(1,0,2)
 
-        return factor_data
 
     def get_output(self, post_fix, oset_idx=None):
         """ get target data from model
 
         Keyword Arguments:
         oset_idx: list of oset gid
-        poset_fix: 'specificiRisk', 'ret_cov', '*.ret'
+        poset_fix: 'specificRisk', 'ret_cov', '*.ret'
         """
         if oset_idx is None:
             return self.model.get(post_fix, None)
