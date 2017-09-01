@@ -278,7 +278,7 @@ x7 = gftIO.zload("/home/weiwu/share/optimize//x7.pkl")
 x8 = gftIO.zload("/home/weiwu/share/optimize//x8.pkl")
 x9 = gftIO.zload("/home/weiwu/share/optimize//x9.pkl")
 x10 = gftIO.zload("/home/weiwu/share/optimize/exposure_constraint.pkl")
-
+risk_model_201707 = gftIO.zload("/home/weiwu/share/optimize/x2.pkl")
 target_mode = x0
 position_limit = x1
 risk_model = x2
@@ -360,7 +360,7 @@ panel_input = ExtractDictModelData(risk_model)
 X = panel_input.get_input_factor(all_factors)
 big_sigma = X.loc[target_date]
 big_sigma = big_sigma[unique_symbol]
-
+big_sigma = big_sigma.reindex(all_factors_gid)
 
 # use the mean return prior target date as the predicted return temperarily
 # will use the forecasted return as ultimate goal
@@ -369,6 +369,8 @@ rets_mean = log_ret(asset_expected_return).mean()
 delta = RiskModel.delta(target_date, idx_level_1_value)    
 big_X = RiskModel.get_factor_exposure(all_factors, target_date, unique_symbol)
 covariance_matrix = RiskModel.covariance_matrix(date=target_date, factors=all_factors)
+covariance_matrix = covariance_matrix.reindex(all_factors_gid,all_factors_gid)
+
 # set boundary vector for h
 df_asset_weight = pd.DataFrame({'lower': [0.0], 'upper': [1.0]},
                                index=idx_level_1_value)
@@ -385,7 +387,7 @@ df_factor_exposure_bound.loc[factor_exposure_constraint.columns, 'upper'] = fact
 
 # Factor model portfolio optimization.
 w = cvx.Variable(noa)
-f = big_X.T.values*w
+f = big_sigma.values*w
 # f = big_X.loc[:,exposure_constraint.columns].T.values*w
 gamma = cvx.Parameter(sign='positive')
 Lmax = cvx.Parameter()
@@ -419,7 +421,7 @@ if exposure_constraint:
 else:
     factor_exp_constraint = []
 
-target_mode = 2
+target_mode = 0
 # leverage level and risk adjusted parameter
 Lmax.value = 1
 gamma.value = 1
@@ -427,9 +429,7 @@ if target_mode == 0:
     # maximize negative product of gamma and risk
     prob_factor = cvx.Problem(cvx.Maximize(-gamma*risk),
                               eq_constraint +
-                              asset_weight_constraint +
-                              group_weight_constraint +
-                              factor_exp_constraint)
+                              asset_weight_constraint)
 if target_mode == 1:
     # minimum risk subject to target return, Markowitz Mean_Variance Portfolio
     prob_factor = cvx.Problem(cvx.Maximize(-gamma*risk),
