@@ -11,6 +11,43 @@ from cvxopt import matrix, spmatrix
 from lib.gftTools import gsConst, gftIO
 
 
+class ExtractDictModelData(object):
+    """ model data extraction and getting attribute. """
+    def __init__(self, model):
+        self.model = model
+
+    def get_input_factor(self, oset_idx):
+        """ Get oset idx from risk model.
+        Keyword Arguments:
+        oset_idx: list of oset gid
+        """
+        if len(oset_idx) < 1:
+            return None
+        date_index = self.model.get(oset_idx[0], None).asMatrix().index
+        ls_factor_b_char = gftIO.strSet2Np(np.array(oset_idx))
+        factor_data = pd.Panel({ls_factor_b_char[key]: self.model.get(factor).asMatrix() for key, factor in enumerate(oset_idx)})
+        return factor_data.transpose(1,0,2)
+
+
+    def get_output(self, post_fix, oset_idx=None):
+        """ get target data from model
+
+        Keyword Arguments:
+        oset_idx: list of oset gid
+        poset_fix: 'specificRisk', 'ret_cov', '*.ret'
+        """
+        if oset_idx is None:
+            return self.model.get(post_fix, None)
+        else:
+            factors_output = pd.DataFrame(
+                index=self.model[oset_idx[0]+post_fix].index, columns=oset_idx)
+            for value in oset_idx:
+                factors_output[value] = self.model[value+post_fix]
+            factors_output.columns = gftIO.strSet2Np(
+                factors_output.columns.values)
+            return factors_output
+
+
 all_factors = ['018D158ACE908165ED4ECEA129ABF547',
                '22895BDA3790CB3FA9FABD1E2FF883CE',
                '265ED5755EEC25762A1293A398C40F5D',
@@ -56,6 +93,8 @@ ls_style_factor = ['873CF94D09229206D675ACC32328DC24',
                    'ABEC912F31E326F4C1FC507AF787C8FA',
                    'E8D70EA915C420F9B9005BB21540788C']
 
+
+all_factors_gid = gftIO.strSet2Np(np.array(all_factors))
 
 class RiskAnlysis(object):
     """ risk data preparation and getting attribute. """
@@ -230,7 +269,7 @@ if not logger.handlers:
 
 x0 = gftIO.zload("/home/weiwu/share/optimize/x0.pkl")
 x1 = gftIO.zload("/home/weiwu/share/optimize/x1.pkl")
-x2 = gftIO.zload("/home/weiwu/share/optimize/x2.pkl")
+x2 = gftIO.zload("/home/weiwu/share/optimize/risk_model_201708.pkl")
 x3 = gftIO.zload("/home/weiwu/share/optimize/x3.pkl")
 x4 = gftIO.zload("/home/weiwu/share/optimize/x4.pkl")
 x5 = gftIO.zload("/home/weiwu/share/optimize/x5.pkl")
@@ -264,6 +303,7 @@ if isinstance(asset_constraint, gftIO.GftTable):
 if isinstance(group_constraint, gftIO.GftTable):
     group_constraint = group_constraint.asMatrix()
 
+position_limit = 58
 
 logger.debug('parse data finished!')
 logger.debug('asset return number: %s', asset_return.shape[1])
@@ -288,6 +328,7 @@ noa = len(unique_symbol)
 if noa <= position_limit:
     position_limit = noa
 
+position_limit = 58
 # select assets by returns and volatility according to target mode.
 if target_mode == 1:
     unique_symbol = asset_return.loc[:target_date, unique_symbol].fillna(0).std().sort_values(ascending=False)[:position_limit].index
@@ -312,6 +353,14 @@ df_pivot_industries_asset_weights = df_pivot_industries_asset_weights.fillna(0)
 idx_level_0_value = df_pivot_industries_asset_weights.columns.get_level_values(0)
 idx_level_0_value = idx_level_0_value.drop_duplicates()
 idx_level_1_value = df_pivot_industries_asset_weights.columns.get_level_values(1)
+
+datetime_index = pd.DatetimeIndex(asset_weight['date'].unique())
+target_date = datetime_index[0]
+panel_input = ExtractDictModelData(risk_model)
+X = panel_input.get_input_factor(all_factors)
+big_sigma = X.loc[target_date]
+big_sigma = big_sigma[unique_symbol]
+
 
 # use the mean return prior target date as the predicted return temperarily
 # will use the forecasted return as ultimate goal

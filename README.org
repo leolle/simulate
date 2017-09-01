@@ -267,3 +267,10 @@ can be used to create a classical mean variance frontier or to explore trade-off
 ** pack factor exposure to pandas panel
 ** make forecasted return for each asset
 ** add group factor exposure
+** reindex:
+- factors:
+factor exposure
+constraint
+
+- symbols
+covariance, delta, f, constraint
