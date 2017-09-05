@@ -22,9 +22,7 @@ def create_constraint(obj, df_limit, ls_constraint):
         return ls_constraint
 
 
-def convex_optimizer(context, mode, position_limit, forecast_return,
-                     original_portfolio, target_risk, target_return, X,
-                     covariance_matrix, delta, constraint):
+def convex_optimizer(context,mode,position_limit,forecast_return,original_portfolio,target_risk,target_return,X,covariance_matrix,delta,constraint):
     '''
     optimize fund weight target on different constraints, objective, based on
     target type and mode, fund return target, fund weight, group weight， etc.
@@ -86,6 +84,7 @@ def convex_optimizer(context, mode, position_limit, forecast_return,
         forecast_return = forecast_return.asMatrix()
     if isinstance(covariance_matrix, gftIO.GftTable):
         covariance_matrix = covariance_matrix.asColumnTab()
+        
     if isinstance(delta, gftIO.GftTable):
         delta = delta.asMatrix()
 
@@ -105,24 +104,24 @@ def convex_optimizer(context, mode, position_limit, forecast_return,
 
 
     # get unique symbols from the portfolio
-    unique_symbol = df_industries_asset_weight[df_industries_asset_weight['date']==target_date]['symbol'].unique()
+    unique_symbol = df_industries_asset_weight['symbol'].unique()
+#    unique_symbol = df_industries_asset_weight[df_industries_asset_weight['date']==target_date]['symbol'].unique()
 
     noa = len(unique_symbol)
     if noa <= position_limit:
         position_limit = noa
 
-
     # select the number of position limit ranked symbols by requested mode.
-    if mode == 1:
+    if mode == gsConst.Const.MinimumRiskUnderReturn:
         unique_symbol = forecast_return.loc[:target_date, unique_symbol].fillna(0).std().sort_values(ascending=False)[:position_limit].index
     else:
         unique_symbol = log_ret(forecast_return.loc[:target_date,unique_symbol].fillna(0)).mean().sort_values(ascending=False)[:position_limit].index
 
-
     # create dataframe for output
     df_opts_weight = pd.DataFrame(data=np.nan, columns=unique_symbol,
                                   index=datetime_index)
-    dict_opts_status = {}
+    dict_opts_status = pd.DataFrame(data=np.nan, columns=gsUtils.getGodGid(),
+                                  index=datetime_index)
 
     for target_date in datetime_index:
         logger.debug('target date: %s', target_date)
@@ -155,9 +154,12 @@ def convex_optimizer(context, mode, position_limit, forecast_return,
         diag = delta.loc[target_date, idx_level_1_value]
         delta_on_date = pd.DataFrame(np.diag(diag), index=diag.index,
                                      columns=diag.index).fillna(0)
-
-        covariance_matrix.set_index('date', inplace=True)
-
+        
+        # extra action in case the index is set as date in the function asColumnTab
+        try:
+            covariance_matrix.set_index('date', inplace=True)
+        except:
+            pass
 
         # get covariance matrix, re-index from the list of all factors' gid
         cov_matrix = covariance_matrix.loc[target_date]
@@ -230,3 +232,12 @@ def convex_optimizer(context, mode, position_limit, forecast_return,
                                           [risk <= target_risk]+eq_constraint+constraint_value)
         prob_factor.solve(verbose=False)
         logger.debug(prob_factor.status)
+        if prob_factor.status == 'infeasible':
+            df_opts_weight.loc[target_date, idx_level_1_value] = np.nan
+            df_opts_weight.fillna(method='pad', inplace=True)
+            dict_opts_status.loc[target_date] = gsConst.Const.Infeasible
+        else:
+            df_opts_weight.loc[target_date, idx_level_1_value] = np.array(w.value.astype(np.float64)).T
+            dict_opts_status.loc[target_date] = gsConst.Const.Feasible
+        
+        return {'weight':df_opts_weight, 'status':dict_opts_status}
