@@ -12,31 +12,31 @@ from lib.gftTools import gftIO
 # from lib.gftTools.RiskModel import RiskAnlysis, FactorExposure
 
 
-# logger = logging.getLogger()
-# handler = logging.StreamHandler()
-# formatter = logging.Formatter('%(asctime)s %(name)-12s %(levelname)-8s %(message)s')
-# handler.setFormatter(formatter)
-# if not handler:
-#     logger.addHandler(handler)
-# logger.setLevel(logging.DEBUG)
+logger = logging.getLogger()
+handler = logging.StreamHandler()
+formatter = logging.Formatter('%(asctime)s %(name)-12s %(levelname)-8s %(message)s')
+handler.setFormatter(formatter)
+if not handler:
+    logger.addHandler(handler)
+logger.setLevel(logging.DEBUG)
 
-# logger.debug('start')
-# risk_model = gftIO.zload("/home/weiwu/share/optimize/x2.pkl")
-# asset_weight = gftIO.zload("/home/weiwu/share/optimize/asset_weights.pkl")
-# begin_date = gftIO.zload("/home/weiwu/share/optimize/begin_date.pkl")
-# end_date = gftIO.zload("/home/weiwu/share/optimize/end_date.pkl")
-# frequency = gftIO.zload("/home/weiwu/share/optimize/frequency.pkl")
-# factors = gftIO.zload("/home/weiwu/share/optimize//factors.pkl")
-# exposure_constraint = gftIO.zload("/home/weiwu/share/optimize/\
-# exposure_constraint.pkl")
+logger.debug('start')
+risk_model = gftIO.zload("/home/weiwu/share/optimize/x2.pkl")
+asset_weight = gftIO.zload("/home/weiwu/share/optimize/asset_weights.pkl")
+begin_date = gftIO.zload("/home/weiwu/share/optimize/begin_date.pkl")
+end_date = gftIO.zload("/home/weiwu/share/optimize/end_date.pkl")
+frequency = gftIO.zload("/home/weiwu/share/optimize/frequency.pkl")
+factors = gftIO.zload("/home/weiwu/share/optimize//factors.pkl")
+exposure_constraint = gftIO.zload("/home/weiwu/share/optimize/\
+exposure_constraint.pkl")
 
-# logger.debug('data loaded')
+logger.debug('data loaded')
 
-# if isinstance(exposure_constraint, gftIO.GftTable):
-#     exposure_constraint = exposure_constraint.asColumnTab()
-#     exposure_constraint = exposure_constraint.pivot(index='idname',
-#                                                     columns='variable',
-#                                                     values='value')
+if isinstance(exposure_constraint, gftIO.GftTable):
+    exposure_constraint = exposure_constraint.asColumnTab()
+    exposure_constraint = exposure_constraint.pivot(index='idname',
+                                                    columns='variable',
+                                                    values='value')
 
 
 # class ExtractDictModelData(object):
@@ -211,7 +211,7 @@ class ExtractDictModelData(object):
         date_index = self.model.get(oset_idx[0], None).asMatrix().index
         ls_factor_b_char = gftIO.strSet2Np(np.array(oset_idx))
         factor_data = pd.Panel({ls_factor_b_char[key]: self.model.get(factor).asMatrix() for key, factor in enumerate(oset_idx)})
-        return factor_data.transpose(1,0,2)
+        return factor_data.transpose(1, 2 ,0)
 
 
     def get_output(self, post_fix, oset_idx=None):
