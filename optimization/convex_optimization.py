@@ -7,7 +7,7 @@ import re
 import cvxpy as cvx
 
 from cvxopt import matrix, spmatrix
-from lib.gftTools import gsConst, gftIO
+from lib.gftTools import gsConst, gftIO, gsUtils
 
 
 def log_ret(rets):
@@ -26,6 +26,39 @@ def convex_optimizer(context,mode,position_limit,forecast_return,original_portfo
     '''
     optimize fund weight target on different constraints, objective, based on
     target type and mode, fund return target, fund weight, group weight， etc.
+
+    Pseudo code
+    -----------
+    1. transfer gftTable data(original portfolio, forecast return, covariance matrix, delta) to dataframe.
+
+    2. remove duplicated rows in the original portfolio.
+
+    3. create empty weight and status dataframe for solution output.
+
+    4. loop the datetimeindex in the original portfolio:
+
+    fetch number of position limit sorted assets by return or volitility according to requested mode.
+
+    check if these assets have data in the input delta matrix in case missing value during risk calculation.
+
+    use the historical mean return prior target date as the predicted return temperarily
+
+    get target date data of sigma, X, delta from input X panel, covariance matrix, delta matrix.
+
+    setup the Factor model portfolio optimization parameter for solution.
+
+    create weight variables, factor variable, return variable, risk variable, equality constraint.
+
+    load inequality constraint.
+
+    solve for optimized weight at this period according to the problem definition
+
+    if prob_factor.status == 'infeasible':
+        # relax constraint
+    else:
+        df_opts_weight.loc[target_date, idx_level_1_value] = np.array(w.value.astype(np.float64)).T
+
+    save optimized solution weight into a dataframe and the solution status to a dictionary.
 
     Parameters
     ----------
@@ -90,9 +123,6 @@ def convex_optimizer(context,mode,position_limit,forecast_return,original_portfo
 
     all_factors_gid = covariance_matrix['factorid1'].unique()
 
-
-    # all_factors_gid = gftIO.strSet2Np(np.array(all_factors))
-    # all_style_factors_gid = gftIO.strSet2Np(np.array(ls_style_factor))
     df_industries_asset_weight = original_portfolio.drop_duplicates(
         subset=['date', 'symbol'])
 
@@ -102,20 +132,12 @@ def convex_optimizer(context,mode,position_limit,forecast_return,original_portfo
     datetime_index = pd.DatetimeIndex(df_industries_asset_weight['date'].unique())
     target_date = datetime_index[0]
 
-
     # get unique symbols from the portfolio
     unique_symbol = df_industries_asset_weight['symbol'].unique()
-#    unique_symbol = df_industries_asset_weight[df_industries_asset_weight['date']==target_date]['symbol'].unique()
 
     noa = len(unique_symbol)
     if noa <= position_limit:
         position_limit = noa
-
-    # select the number of position limit ranked symbols by requested mode.
-    if mode == gsConst.Const.MinimumRiskUnderReturn:
-        unique_symbol = forecast_return.loc[:target_date, unique_symbol].fillna(0).std().sort_values(ascending=False)[:position_limit].index
-    else:
-        unique_symbol = log_ret(forecast_return.loc[:target_date,unique_symbol].fillna(0)).mean().sort_values(ascending=False)[:position_limit].index
 
     # create dataframe for output
     df_opts_weight = pd.DataFrame(data=np.nan, columns=unique_symbol,
@@ -125,33 +147,26 @@ def convex_optimizer(context,mode,position_limit,forecast_return,original_portfo
 
     for target_date in datetime_index:
         logger.debug('target date: %s', target_date)
+        # select the number of position limit ranked symbols by requested mode.
+        if mode == gsConst.Const.MinimumRiskUnderReturn:
+            target_assets = forecast_return.loc[:target_date, unique_symbol].fillna(0).std().sort_values(ascending=False)[:position_limit].index
+        else:
+            target_assets = log_ret(forecast_return.loc[:target_date,unique_symbol].fillna(0)).mean().sort_values(ascending=False)[:position_limit].index
+        logger.debug('target assets: %s', target_assets.shape)
+        
         try:
-            if np.setdiff1d(unique_symbol, delta.loc[target_date].index):
+            if np.setdiff1d(target_assets, delta.loc[target_date].index):
                 pass
         except ValueError:
-            logger.debug('some symbols are not in asset weight symbols.')
+            logger.debug('some assets in the original portfolio are not in input delta.')
 
-
-        # get a pivot table, setting industry and symbol for two levels on the column
-        df_pivot_industries_asset_weights = pd.pivot_table(
-            df_industries_asset_weight, values='value', index=['date'],
-            columns=['industry', 'symbol'])
-
-        # pivot the original dataframe to multi-index dataframe
-        # level 0 value: industry
-        # level 1 value: assets, the order of assets are changed.
-        df_pivot_industries_asset_weights = df_pivot_industries_asset_weights.fillna(0)
-        idx_level_0_value = df_pivot_industries_asset_weights.columns.get_level_values(0)
-        idx_level_0_value = idx_level_0_value.drop_duplicates()
-        idx_level_1_value = df_pivot_industries_asset_weights.columns.get_level_values(1)
         # use the mean return prior target date as the predicted return temperarily
         # will use the forecasted return as ultimate goal
-        asset_expected_return = forecast_return.loc[:target_date, idx_level_1_value].fillna(0)
+        asset_expected_return = forecast_return.loc[:target_date, target_assets].fillna(0)
         rets_mean = log_ret(asset_expected_return).mean()
 
-
         # get delta on the target date, which is a diagonal matrix
-        diag = delta.loc[target_date, idx_level_1_value]
+        diag = delta.loc[target_date, target_assets]
         delta_on_date = pd.DataFrame(np.diag(diag), index=diag.index,
                                      columns=diag.index).fillna(0)
         
@@ -166,19 +181,16 @@ def convex_optimizer(context,mode,position_limit,forecast_return,original_portfo
         cov_matrix = cov_matrix.pivot(index='factorid1', columns='factorid2', values='value')
         cov_matrix = cov_matrix.reindex(all_factors_gid, all_factors_gid, fill_value=np.nan)
 
-        # # big X is sigma in the quadratic equation, size = 35 * number of assets
+        # big X is sigma in the quadratic equation, size = 35 * number of assets
         big_X = X.loc[target_date]
-        big_X = big_X[idx_level_1_value]
-        big_X = big_X.reindex(index=all_factors_gid)
+        big_X = big_X.loc[target_assets]
+        big_X = big_X.reindex(columns=all_factors_gid)
         big_X.fillna(0,inplace=True)
 
-
-        # # setup the optimization parameter
-
-        # Factor model portfolio optimization.
+        # setup the Factor model portfolio optimization parameter
         # w is the solution x variable
         w = cvx.Variable(noa)
-        f = big_X.values*w
+        f = big_X.T.values*w
 
         # gamma parameter, multiplier of risk
         gamma = cvx.Parameter(sign='positive')
@@ -193,26 +205,38 @@ def convex_optimizer(context,mode,position_limit,forecast_return,original_portfo
                          cvx.norm(w, 1) <= Lmax]
 
         # setup value constraint:
+        """
+        # asset constraint:
+        Asset ts_asset_group_loading diagonal matrix:(OOTV, Matrix M1(n * n)), 59 * 59.
+        asset value range, value1, value2, 58 * 2.
+        select 58 * 58 from diagonal matrix, order by idx_leve1_value.
+        product: multiply_matrix.T.values * w, [58x58] * [58x1]
+
+        # industry constraint:
+        industry ts_asset_group_loading sparse matrix:(OOTV, Matrix M1(n * m)), 58 * 26.
+        industry value range, value1, value2, 26 * 2.
+        select 58 * 26 from sparse matrix, order by group_constraint index value.
+        product: multiply_matrix.T.values * w, [26x58] * [58x1]=[26x1]
+
+        # factor constraint:
+        factor ts_asset_group_loading exposure matrix:(OOTV, Matrix M1(n * m)), 35 * 3436.
+        factor exposure value range, value1, value2, 35 * 2.
+        select 35 * 58 from factor exposure matrix.
+        product: multiply_matrix.T.values * w, [35x58] * [58x1]=[35x1]
+        """
         constraint_value = []
         for cst in constraint:
-            try:
-                multiply_matrix = cst['ts_asset_group_loading'].\
-                                  loc[target_date].loc[idx_level_1_value,
-                                                       idx_level_1_value]
-            except KeyError:
-                multiply_matrix = cst['ts_asset_group_loading'].\
-                                  loc[target_date].loc[idx_level_1_value]
-
+            # in order to align the production.
             df_boundary = cst['ts_group_loading_range'].asColumnTab()
             df_boundary = df_boundary.loc[(df_boundary['date'] == target_date)]
             df_boundary.drop('date', axis=1, inplace=True)
             df_boundary.set_index('target', inplace=True)
-            if set(idx_level_1_value).issubset(set(df_boundary.index)):
-                df_boundary = df_boundary.reindex(idx_level_1_value)
-                logger.debug("df_boundary re-index")
-            # df_boundary = df_boundary.reindex(idx_level_1_value)
-            #logger.debug("multiply_matrix %s",multiply_matrix.shape)
-            #logger.debug("df_boundary %s",df_boundary.shape)
+            df_boundary_idx = df_boundary.index
+
+            multiply_matrix = cst['ts_asset_group_loading'].\
+                                  loc[target_date].loc[target_assets,
+                                                       df_boundary_idx].fillna(0)
+
             create_constraint(multiply_matrix.T.values*w,
                               df_boundary, constraint_value)
             # leverage level and risk adjusted parameter
@@ -233,11 +257,11 @@ def convex_optimizer(context,mode,position_limit,forecast_return,original_portfo
         prob_factor.solve(verbose=False)
         logger.debug(prob_factor.status)
         if prob_factor.status == 'infeasible':
-            df_opts_weight.loc[target_date, idx_level_1_value] = np.nan
+            df_opts_weight.loc[target_date, target_assets] = np.nan
             df_opts_weight.fillna(method='pad', inplace=True)
             dict_opts_status.loc[target_date] = gsConst.Const.Infeasible
         else:
-            df_opts_weight.loc[target_date, idx_level_1_value] = np.array(w.value.astype(np.float64)).T
+            df_opts_weight.loc[target_date, target_assets] = np.array(w.value.astype(np.float64)).T
             dict_opts_status.loc[target_date] = gsConst.Const.Feasible
         
         return {'weight':df_opts_weight, 'status':dict_opts_status}
