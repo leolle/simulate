@@ -265,7 +265,8 @@ def convex_optimizer(context,mode,position_limit,forecast_return,original_portfo
 
         return {'weight':df_opts_weight, 'status':dict_opts_status}
 
-
+import datetime
+time_start = datetime.datetime.now()
 logger = logging.getLogger()
 handler = logging.StreamHandler()
 formatter = logging.Formatter('%(asctime)s %(name)-12s %(levelname)-8s %(message)s')
@@ -275,20 +276,25 @@ if not handler:
 logger.setLevel(logging.DEBUG)
 
 logger.debug('start')
-if not context:
-    context = gftIO.zload("/home/weiwu/share/optimize/context.pkl")
-    mode = gftIO.zload("/home/weiwu/share/optimize/mode.pkl")
-    position_limit = gftIO.zload("/home/weiwu/share/optimize/position_limit.pkl")
-    forecast_return = gftIO.zload("/home/weiwu/share/optimize/forecast_return.pkl")
-    original_portfolio = gftIO.zload("/home/weiwu/share/optimize/original_portfolio.pkl")
-    target_risk = gftIO.zload("/home/weiwu/share/optimize/target_risk.pkl")
-    target_return = gftIO.zload("/home/weiwu/share/optimize/target_return.pkl")
-    X = gftIO.zload("/home/weiwu/share/optimize/X.pkl")
-    covariance_matrix = gftIO.zload("/home/weiwu/share/optimize/covariance_matrix.pkl")
-    delta = gftIO.zload("/home/weiwu/share/optimize/delta.pkl")
-    constraint1 = gftIO.zload("/home/weiwu/share/optimize/constraint1.pkl")
-    constraint2 = gftIO.zload("/home/weiwu/share/optimize/constraint2.pkl")
-    constraint3 = gftIO.zload("/home/weiwu/share/optimize/constraint3.pkl")
-    logger.debug('data loaded')
+#if not context:
+context = gftIO.zload("/home/weiwu/share/optimize/context.pkl")
+mode = gftIO.zload("/home/weiwu/share/optimize/mode.pkl")
+position_limit = gftIO.zload("/home/weiwu/share/optimize/position_limit.pkl")
+forecast_return = gftIO.zload("/home/weiwu/share/optimize/forecast_return.pkl")
+original_portfolio = gftIO.zload("/home/weiwu/share/optimize/original_portfolio.pkl")
+target_risk = gftIO.zload("/home/weiwu/share/optimize/target_risk.pkl")
+target_return = gftIO.zload("/home/weiwu/share/optimize/target_return.pkl")
+X = gftIO.zload("/home/weiwu/share/optimize/X.pkl")
+covariance_matrix = gftIO.zload("/home/weiwu/share/optimize/covariance_matrix.pkl")
+delta = gftIO.zload("/home/weiwu/share/optimize/delta.pkl")
+constraint1 = gftIO.zload("/home/weiwu/share/optimize/constraint1.pkl")
+constraint2 = gftIO.zload("/home/weiwu/share/optimize/constraint2.pkl")
+constraint3 = gftIO.zload("/home/weiwu/share/optimize/constraint3.pkl")
+logger.debug('data loaded')
+time_loading = datetime.datetime.now()
 
 convex_optimizer(context,mode,position_limit,forecast_return,original_portfolio,target_risk,target_return,X,covariance_matrix,delta,constraint1, constraint2, constraint3)
+
+time_end = datetime.datetime.now()
+print(time_loading - time_start)
+print(time_end - time_loading)
