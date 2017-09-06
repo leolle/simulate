@@ -96,3 +96,5 @@ class Const(BaseConst):
     MinimumRisk = 0
     MinimumRiskUnderReturn = 1
     MaximumReturnUnderRisk = 2
+    Feasible = 1
+    Infeasible = 0

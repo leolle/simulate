@@ -6,7 +6,6 @@ import pandas as pd
 import re
 import cvxpy as cvx
 
-from cvxopt import matrix, spmatrix
 from lib.gftTools import gsConst, gftIO, gsUtils
 
 
@@ -22,7 +21,7 @@ def create_constraint(obj, df_limit, ls_constraint):
         return ls_constraint
 
 
-def convex_optimizer(context,mode,position_limit,forecast_return,original_portfolio,target_risk,target_return,X,covariance_matrix,delta,constraint):
+def convex_optimizer(context,mode,position_limit,forecast_return,original_portfolio,target_risk,target_return,X,covariance_matrix,delta,*constraint):
     '''
     optimize fund weight target on different constraints, objective, based on
     target type and mode, fund return target, fund weight, group weight， etc.
@@ -117,7 +116,7 @@ def convex_optimizer(context,mode,position_limit,forecast_return,original_portfo
         forecast_return = forecast_return.asMatrix()
     if isinstance(covariance_matrix, gftIO.GftTable):
         covariance_matrix = covariance_matrix.asColumnTab()
-        
+
     if isinstance(delta, gftIO.GftTable):
         delta = delta.asMatrix()
 
@@ -153,7 +152,7 @@ def convex_optimizer(context,mode,position_limit,forecast_return,original_portfo
         else:
             target_assets = log_ret(forecast_return.loc[:target_date,unique_symbol].fillna(0)).mean().sort_values(ascending=False)[:position_limit].index
         logger.debug('target assets: %s', target_assets.shape)
-        
+
         try:
             if np.setdiff1d(target_assets, delta.loc[target_date].index):
                 pass
@@ -169,7 +168,7 @@ def convex_optimizer(context,mode,position_limit,forecast_return,original_portfo
         diag = delta.loc[target_date, target_assets]
         delta_on_date = pd.DataFrame(np.diag(diag), index=diag.index,
                                      columns=diag.index).fillna(0)
-        
+
         # extra action in case the index is set as date in the function asColumnTab
         try:
             covariance_matrix.set_index('date', inplace=True)
@@ -263,5 +262,33 @@ def convex_optimizer(context,mode,position_limit,forecast_return,original_portfo
         else:
             df_opts_weight.loc[target_date, target_assets] = np.array(w.value.astype(np.float64)).T
             dict_opts_status.loc[target_date] = gsConst.Const.Feasible
-        
+
         return {'weight':df_opts_weight, 'status':dict_opts_status}
+
+
+logger = logging.getLogger()
+handler = logging.StreamHandler()
+formatter = logging.Formatter('%(asctime)s %(name)-12s %(levelname)-8s %(message)s')
+handler.setFormatter(formatter)
+if not handler:
+    logger.addHandler(handler)
+logger.setLevel(logging.DEBUG)
+
+logger.debug('start')
+if not context:
+    context = gftIO.zload("/home/weiwu/share/optimize/context.pkl")
+    mode = gftIO.zload("/home/weiwu/share/optimize/mode.pkl")
+    position_limit = gftIO.zload("/home/weiwu/share/optimize/position_limit.pkl")
+    forecast_return = gftIO.zload("/home/weiwu/share/optimize/forecast_return.pkl")
+    original_portfolio = gftIO.zload("/home/weiwu/share/optimize/original_portfolio.pkl")
+    target_risk = gftIO.zload("/home/weiwu/share/optimize/target_risk.pkl")
+    target_return = gftIO.zload("/home/weiwu/share/optimize/target_return.pkl")
+    X = gftIO.zload("/home/weiwu/share/optimize/X.pkl")
+    covariance_matrix = gftIO.zload("/home/weiwu/share/optimize/covariance_matrix.pkl")
+    delta = gftIO.zload("/home/weiwu/share/optimize/delta.pkl")
+    constraint1 = gftIO.zload("/home/weiwu/share/optimize/constraint1.pkl")
+    constraint2 = gftIO.zload("/home/weiwu/share/optimize/constraint2.pkl")
+    constraint3 = gftIO.zload("/home/weiwu/share/optimize/constraint3.pkl")
+    logger.debug('data loaded')
+
+convex_optimizer(context,mode,position_limit,forecast_return,original_portfolio,target_risk,target_return,X,covariance_matrix,delta,constraint1, constraint2, constraint3)
