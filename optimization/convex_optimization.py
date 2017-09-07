@@ -94,10 +94,9 @@ def convex_optimizer(context,mode,position_limit,forecast_return,original_portfo
 
     Returns
     -------
-    df_result: DataFrame
-        Optimized value of weight.
-        Index: target date.
-        Columns: assets names.
+    result: dictionary
+        'weight':df_opts_weight
+        'status':dict_opts_status
     '''
     # create logger
     logger = logging.getLogger()
