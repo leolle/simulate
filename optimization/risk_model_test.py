@@ -244,12 +244,12 @@ ls_style_factor = ['873CF94D09229206D675ACC32328DC24',
 
 ModelData = ExtractDictModelData(risk_model)
 test = ModelData.get_input_factor(ls_style_factor)
-RiskModel = RiskAnlysis(risk_model)
-RiskModel.factor_exposure(asset_weight, frequency, factors)
-RiskModel.factor_return()
+#RiskModel = RiskAnlysis(risk_model)
+# RiskModel.factor_exposure(asset_weight, frequency, factors)
+# RiskModel.factor_return()
 
-specific_risk = risk_model['specificRisk'].pivot(
-    index='date', columns='symbol', values='specificrisk')
-date_index = specific_risk.index
-ls_symbols = specific_risk.columns
+# specific_risk = risk_model['specificRisk'].pivot(
+#     index='date', columns='symbol', values='specificrisk')
+# date_index = specific_risk.index
+# ls_symbols = specific_risk.columns
 

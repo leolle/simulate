@@ -110,11 +110,16 @@ def convex_optimizer(context,mode,position_limit,forecast_return,original_portfo
 
     # convert gft table to pandas dataframe
     if isinstance(original_portfolio, gftIO.GftTable):
-        original_portfolio = original_portfolio.asColumnTab()
+        original_portfolio = original_portfolio_hs300.asColumnTab()
     if isinstance(forecast_return, gftIO.GftTable):
         forecast_return = forecast_return.asMatrix()
     if isinstance(covariance_matrix, gftIO.GftTable):
-        covariance_matrix = covariance_matrix.asColumnTab()
+        covariance_matrix = covariance_matrix.asColumnTab().copy()
+        # extra action in case the index is set as date in the function asColumnTab
+        try:
+            covariance_matrix.set_index('date', inplace=True)
+        except:
+            pass
 
     if isinstance(delta, gftIO.GftTable):
         delta = delta.asMatrix()
@@ -133,10 +138,6 @@ def convex_optimizer(context,mode,position_limit,forecast_return,original_portfo
     # get unique symbols from the portfolio
     unique_symbol = df_industries_asset_weight['symbol'].unique()
 
-    noa = len(unique_symbol)
-    if noa <= position_limit:
-        position_limit = noa
-
     # create dataframe for output
     df_opts_weight = pd.DataFrame(data=np.nan, columns=unique_symbol,
                                   index=datetime_index)
@@ -145,18 +146,24 @@ def convex_optimizer(context,mode,position_limit,forecast_return,original_portfo
 
     for target_date in datetime_index:
         logger.debug('target date: %s', target_date)
+        # only select those intersection assets between unique symbol and symbols in delta on target date.
+        target_assets = delta.loc[target_date].index.intersection(unique_symbol)
         # select the number of position limit ranked symbols by requested mode.
         if mode == gsConst.Const.MinimumRiskUnderReturn:
-            target_assets = forecast_return.loc[:target_date, unique_symbol].fillna(0).std().sort_values(ascending=False)[:position_limit].index
+            target_assets = forecast_return.loc[:target_date, target_assets].fillna(0).std().sort_values(ascending=False)[:position_limit].index
         else:
-            target_assets = log_ret(forecast_return.loc[:target_date,unique_symbol].fillna(0)).mean().sort_values(ascending=False)[:position_limit].index
+            target_assets = log_ret(forecast_return.loc[:target_date,target_assets].fillna(0)).mean().sort_values(ascending=False)[:position_limit].index
+
+        noa = len(target_assets)
+        if noa <= position_limit:
+            position_limit = noa
         logger.debug('target assets: %s', target_assets.shape)
 
-        try:
-            if np.setdiff1d(target_assets, delta.loc[target_date].index):
-                pass
-        except ValueError:
-            logger.debug('some assets in the original portfolio are not in input delta.')
+        # try:
+        #     if np.setdiff1d(target_assets, delta.loc[target_date].index):
+        #         pass
+        # except ValueError:
+        #     logger.debug('some assets in the original portfolio are not in input delta.')
 
         # use the mean return prior target date as the predicted return temperarily
         # will use the forecasted return as ultimate goal
@@ -167,12 +174,6 @@ def convex_optimizer(context,mode,position_limit,forecast_return,original_portfo
         diag = delta.loc[target_date, target_assets]
         delta_on_date = pd.DataFrame(np.diag(diag), index=diag.index,
                                      columns=diag.index).fillna(0)
-
-        # extra action in case the index is set as date in the function asColumnTab
-        try:
-            covariance_matrix.set_index('date', inplace=True)
-        except:
-            pass
 
         # get covariance matrix, re-index from the list of all factors' gid
         cov_matrix = covariance_matrix.loc[target_date]
@@ -223,35 +224,38 @@ def convex_optimizer(context,mode,position_limit,forecast_return,original_portfo
         product: multiply_matrix.T.values * w, [35x58] * [58x1]=[35x1]
         """
         constraint_value = []
-        for cst in constraint:
-            # in order to align the production.
-            df_boundary = cst['ts_group_loading_range'].asColumnTab()
-            df_boundary = df_boundary.loc[(df_boundary['date'] == target_date)]
-            df_boundary.drop('date', axis=1, inplace=True)
-            df_boundary.set_index('target', inplace=True)
-            df_boundary_idx = df_boundary.index
+        # for cst in constraint:
+        #     if cst is None:
+        #         continue
+        #     # in order to align the production.
+        #     df_boundary = cst['ts_group_loading_range'].asColumnTab()
+        #     df_boundary = df_boundary.loc[(df_boundary['date'] == target_date)]
+        #     df_boundary.drop('date', axis=1, inplace=True)
+        #     df_boundary.set_index('target', inplace=True)
+        #     df_boundary_idx = df_boundary.index
 
-            multiply_matrix = cst['ts_asset_group_loading'].\
-                                  loc[target_date].loc[target_assets,
-                                                       df_boundary_idx].fillna(0)
+        #     multiply_matrix = cst['ts_asset_group_loading'].\
+        #                           loc[target_date].loc[target_assets,
+        #                                                df_boundary_idx].fillna(0)
 
-            create_constraint(multiply_matrix.T.values*w,
-                              df_boundary, constraint_value)
-            # leverage level and risk adjusted parameter
-            Lmax.value = 1
-            gamma.value = 1
-            if mode == gsConst.Const.MinimumRisk:
-                # maximize negative product of gamma and risk
-                prob_factor = cvx.Problem(cvx.Maximize(-gamma*risk),
-                                          eq_constraint + constraint_value)
-            if mode == gsConst.Const.MinimumRiskUnderReturn:
-                # minimum risk subject to target return, Markowitz Mean_Variance Portfolio
-                prob_factor = cvx.Problem(cvx.Maximize(-gamma*risk),
-                                          [ret >= target_return]+eq_constraint+constraint_value)
-            if mode == gsConst.Const.MaximumReturnUnderRisk:
-                # Portfolio optimization with a leverage limit and a bound on risk
-                prob_factor = cvx.Problem(cvx.Maximize(ret),
-                                          [risk <= target_risk]+eq_constraint+constraint_value)
+        #     create_constraint(multiply_matrix.T.values*w,
+        #                       df_boundary, constraint_value)
+
+        # leverage level and risk adjusted parameter
+        Lmax.value = 1
+        gamma.value = 1
+        if mode == gsConst.Const.MinimumRisk:
+            # maximize negative product of gamma and risk
+            prob_factor = cvx.Problem(cvx.Maximize(-gamma*risk),
+                                      eq_constraint + constraint_value)
+        if mode == gsConst.Const.MinimumRiskUnderReturn:
+            # minimum risk subject to target return, Markowitz Mean_Variance Portfolio
+            prob_factor = cvx.Problem(cvx.Maximize(-gamma*risk),
+                                      [ret >= target_return]+eq_constraint+constraint_value)
+        if mode == gsConst.Const.MaximumReturnUnderRisk:
+            # Portfolio optimization with a leverage limit and a bound on risk
+            prob_factor = cvx.Problem(cvx.Maximize(ret),
+                                      [risk <= target_risk]+eq_constraint+constraint_value)
         prob_factor.solve(verbose=False)
         logger.debug(prob_factor.status)
         if prob_factor.status == 'infeasible':
@@ -262,10 +266,10 @@ def convex_optimizer(context,mode,position_limit,forecast_return,original_portfo
             df_opts_weight.loc[target_date, target_assets] = np.array(w.value.astype(np.float64)).T
             dict_opts_status.loc[target_date] = gsConst.Const.Feasible
 
-        return {'weight':df_opts_weight, 'status':dict_opts_status}
+    return {'weight':df_opts_weight, 'status':dict_opts_status}
 
-import datetime
-time_start = datetime.datetime.now()
+# import datetime
+# time_start = datetime.datetime.now()
 logger = logging.getLogger()
 handler = logging.StreamHandler()
 formatter = logging.Formatter('%(asctime)s %(name)-12s %(levelname)-8s %(message)s')
@@ -275,12 +279,13 @@ if not handler:
 logger.setLevel(logging.DEBUG)
 
 logger.debug('start')
-#if not context:
+# #if not context:
 context = gftIO.zload("/home/weiwu/share/optimize/context.pkl")
 mode = gftIO.zload("/home/weiwu/share/optimize/mode.pkl")
 position_limit = gftIO.zload("/home/weiwu/share/optimize/position_limit.pkl")
 forecast_return = gftIO.zload("/home/weiwu/share/optimize/forecast_return.pkl")
 original_portfolio = gftIO.zload("/home/weiwu/share/optimize/original_portfolio.pkl")
+original_portfolio_hs300 = gftIO.zload("/home/weiwu/share/optimize/original_portfolio_hs300.pkl")
 target_risk = gftIO.zload("/home/weiwu/share/optimize/target_risk.pkl")
 target_return = gftIO.zload("/home/weiwu/share/optimize/target_return.pkl")
 X = gftIO.zload("/home/weiwu/share/optimize/X.pkl")
@@ -289,11 +294,14 @@ delta = gftIO.zload("/home/weiwu/share/optimize/delta.pkl")
 constraint1 = gftIO.zload("/home/weiwu/share/optimize/constraint1.pkl")
 constraint2 = gftIO.zload("/home/weiwu/share/optimize/constraint2.pkl")
 constraint3 = gftIO.zload("/home/weiwu/share/optimize/constraint3.pkl")
+null = gftIO.zload("/home/weiwu/share/optimize/NULL.pkl")
+
 logger.debug('data loaded')
-time_loading = datetime.datetime.now()
+# time_loading = datetime.datetime.now()
 
-convex_optimizer(context,mode,position_limit,forecast_return,original_portfolio,target_risk,target_return,X,covariance_matrix,delta,constraint1, constraint2, constraint3)
+#convex_optimizer(context,mode,position_limit,forecast_return,original_portfolio,target_risk,target_return,X,covariance_matrix,delta,constraint1, constraint2, constraint3)
+#convex_optimizer(context,mode,position_limit,forecast_return,original_portfolio_hs300,target_risk,target_return,X,covariance_matrix,delta,null)
 
-time_end = datetime.datetime.now()
-print(time_loading - time_start)
-print(time_end - time_loading)
+# time_end = datetime.datetime.now() 
+# print(time_loading - time_start)
+# print(time_end - time_loading)
