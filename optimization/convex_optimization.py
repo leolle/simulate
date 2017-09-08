@@ -110,7 +110,7 @@ def convex_optimizer(context,mode,position_limit,forecast_return,original_portfo
 
     # convert gft table to pandas dataframe
     if isinstance(original_portfolio, gftIO.GftTable):
-        original_portfolio = original_portfolio_hs300.asColumnTab()
+        original_portfolio = original_portfolio.asColumnTab().copy()
     if isinstance(forecast_return, gftIO.GftTable):
         forecast_return = forecast_return.asMatrix()
     if isinstance(covariance_matrix, gftIO.GftTable):
@@ -141,13 +141,20 @@ def convex_optimizer(context,mode,position_limit,forecast_return,original_portfo
     # create dataframe for output
     df_opts_weight = pd.DataFrame(data=np.nan, columns=unique_symbol,
                                   index=datetime_index)
-    dict_opts_status = pd.DataFrame(data=np.nan, columns=gsUtils.getGodGid(),
+    df_opts_status = pd.DataFrame(data=np.nan, columns=gsUtils.getGodGid(),
                                   index=datetime_index)
 
     for target_date in datetime_index:
         logger.debug('target date: %s', target_date)
         # only select those intersection assets between unique symbol and symbols in delta on target date.
-        target_assets = delta.loc[target_date].index.intersection(unique_symbol)
+        try:
+            target_assets = delta.loc[target_date].index.intersection(unique_symbol)
+        except KeyError as e:
+            logger.debug(e.args)
+            # fill the weight with previous value if error.
+            df_opts_weight.fillna(method='pad', inplace=True)
+            df_opts_status.loc[target_date] = gsConst.Const.Infeasible
+            continue
         # select the number of position limit ranked symbols by requested mode.
         if mode == gsConst.Const.MinimumRiskUnderReturn:
             target_assets = forecast_return.loc[:target_date, target_assets].fillna(0).std().sort_values(ascending=False)[:position_limit].index
@@ -155,15 +162,9 @@ def convex_optimizer(context,mode,position_limit,forecast_return,original_portfo
             target_assets = log_ret(forecast_return.loc[:target_date,target_assets].fillna(0)).mean().sort_values(ascending=False)[:position_limit].index
 
         noa = len(target_assets)
-        if noa <= position_limit:
-            position_limit = noa
+        # if noa <= position_limit:
+        #     position_limit = noa
         logger.debug('target assets: %s', target_assets.shape)
-
-        # try:
-        #     if np.setdiff1d(target_assets, delta.loc[target_date].index):
-        #         pass
-        # except ValueError:
-        #     logger.debug('some assets in the original portfolio are not in input delta.')
 
         # use the mean return prior target date as the predicted return temperarily
         # will use the forecasted return as ultimate goal
@@ -224,22 +225,22 @@ def convex_optimizer(context,mode,position_limit,forecast_return,original_portfo
         product: multiply_matrix.T.values * w, [35x58] * [58x1]=[35x1]
         """
         constraint_value = []
-        # for cst in constraint:
-        #     if cst is None:
-        #         continue
-        #     # in order to align the production.
-        #     df_boundary = cst['ts_group_loading_range'].asColumnTab()
-        #     df_boundary = df_boundary.loc[(df_boundary['date'] == target_date)]
-        #     df_boundary.drop('date', axis=1, inplace=True)
-        #     df_boundary.set_index('target', inplace=True)
-        #     df_boundary_idx = df_boundary.index
+        for cst in constraint:
+            if cst is None:
+                continue
+            # in order to align the production.
+            df_boundary = cst['ts_group_loading_range'].asColumnTab().copy()
+            df_boundary = df_boundary.loc[(df_boundary['date'] == target_date)]
+            df_boundary.drop('date', axis=1, inplace=True)
+            df_boundary.set_index('target', inplace=True)
+            df_boundary_idx = df_boundary.index
 
-        #     multiply_matrix = cst['ts_asset_group_loading'].\
-        #                           loc[target_date].loc[target_assets,
-        #                                                df_boundary_idx].fillna(0)
+            multiply_matrix = cst['ts_asset_group_loading'].copy().\
+                                  loc[target_date].loc[target_assets,
+                                                       df_boundary_idx].fillna(0)
 
-        #     create_constraint(multiply_matrix.T.values*w,
-        #                       df_boundary, constraint_value)
+            create_constraint(multiply_matrix.T.values*w,
+                              df_boundary, constraint_value)
 
         # leverage level and risk adjusted parameter
         Lmax.value = 1
@@ -259,14 +260,13 @@ def convex_optimizer(context,mode,position_limit,forecast_return,original_portfo
         prob_factor.solve(verbose=False)
         logger.debug(prob_factor.status)
         if prob_factor.status == 'infeasible':
-            df_opts_weight.loc[target_date, target_assets] = np.nan
-            df_opts_weight.fillna(method='pad', inplace=True)
-            dict_opts_status.loc[target_date] = gsConst.Const.Infeasible
+            #df_opts_weight.fillna(method='pad', inplace=True)
+            df_opts_status.loc[target_date] = gsConst.Const.Infeasible
         else:
             df_opts_weight.loc[target_date, target_assets] = np.array(w.value.astype(np.float64)).T
-            dict_opts_status.loc[target_date] = gsConst.Const.Feasible
+            df_opts_status.loc[target_date] = gsConst.Const.Feasible
 
-    return {'weight':df_opts_weight, 'status':dict_opts_status}
+    return {'weight':df_opts_weight.fillna(0), 'status':df_opts_status}
 
 # import datetime
 # time_start = datetime.datetime.now()
@@ -284,23 +284,23 @@ context = gftIO.zload("/home/weiwu/share/optimize/context.pkl")
 mode = gftIO.zload("/home/weiwu/share/optimize/mode.pkl")
 position_limit = gftIO.zload("/home/weiwu/share/optimize/position_limit.pkl")
 forecast_return = gftIO.zload("/home/weiwu/share/optimize/forecast_return.pkl")
-original_portfolio = gftIO.zload("/home/weiwu/share/optimize/original_portfolio.pkl")
+#original_portfolio = gftIO.zload("/home/weiwu/share/optimize/original_portfolio.pkl")
 original_portfolio_hs300 = gftIO.zload("/home/weiwu/share/optimize/original_portfolio_hs300.pkl")
 target_risk = gftIO.zload("/home/weiwu/share/optimize/target_risk.pkl")
 target_return = gftIO.zload("/home/weiwu/share/optimize/target_return.pkl")
 X = gftIO.zload("/home/weiwu/share/optimize/X.pkl")
 covariance_matrix = gftIO.zload("/home/weiwu/share/optimize/covariance_matrix.pkl")
 delta = gftIO.zload("/home/weiwu/share/optimize/delta.pkl")
-constraint1 = gftIO.zload("/home/weiwu/share/optimize/constraint1.pkl")
-constraint2 = gftIO.zload("/home/weiwu/share/optimize/constraint2.pkl")
-constraint3 = gftIO.zload("/home/weiwu/share/optimize/constraint3.pkl")
+constraint1 = gftIO.zload("/home/weiwu/share/optimize/individual_asset_weight_constraint.pkl")
+constraint2 = gftIO.zload("/home/weiwu/share/optimize/industry_weight_constraint.pkl")
+factor_exposure_constraint = gftIO.zload("/home/weiwu/share/optimize/factor_exposure_constraint.pkl")
 null = gftIO.zload("/home/weiwu/share/optimize/NULL.pkl")
 
 logger.debug('data loaded')
 # time_loading = datetime.datetime.now()
 
 #convex_optimizer(context,mode,position_limit,forecast_return,original_portfolio,target_risk,target_return,X,covariance_matrix,delta,constraint1, constraint2, constraint3)
-#convex_optimizer(context,mode,position_limit,forecast_return,original_portfolio_hs300,target_risk,target_return,X,covariance_matrix,delta,null)
+result = convex_optimizer(context,mode,position_limit,forecast_return,original_portfolio_hs300,target_risk,target_return,X,covariance_matrix,delta,constraint1,constraint2,factor_exposure_constraint)
 
 # time_end = datetime.datetime.now() 
 # print(time_loading - time_start)
