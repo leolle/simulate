@@ -110,7 +110,7 @@ def convex_optimizer(context,mode,position_limit,forecast_return,original_portfo
 
     # convert gft table to pandas dataframe
     if isinstance(original_portfolio, gftIO.GftTable):
-        original_portfolio = original_portfolio.asColumnTab().copy()
+        original_portfolio = original_portfolio.asColumnTab()
     if isinstance(forecast_return, gftIO.GftTable):
         forecast_return = forecast_return.asMatrix()
     if isinstance(covariance_matrix, gftIO.GftTable):
@@ -126,10 +126,7 @@ def convex_optimizer(context,mode,position_limit,forecast_return,original_portfo
 
     all_factors_gid = covariance_matrix['factorid1'].unique()
 
-    df_industries_asset_weight = original_portfolio.drop_duplicates(
-        subset=['date', 'symbol'])
-
-    df_industries_asset_weight = df_industries_asset_weight.dropna(
+    df_industries_asset_weight = original_portfolio.dropna(
         axis=0, subset=['industry', 'symbol'], how='any')
 
     datetime_index = pd.DatetimeIndex(df_industries_asset_weight['date'].unique())
@@ -157,19 +154,16 @@ def convex_optimizer(context,mode,position_limit,forecast_return,original_portfo
             continue
         # select the number of position limit ranked symbols by requested mode.
         if mode == gsConst.Const.MinimumRiskUnderReturn:
-            target_assets = forecast_return.loc[:target_date, target_assets].fillna(0).std().sort_values(ascending=False)[:position_limit].index
+            target_assets = forecast_return.loc[:target_date, target_assets].fillna('pad').std().sort_values(ascending=False)[:position_limit].index
         else:
-            target_assets = log_ret(forecast_return.loc[:target_date,target_assets].fillna(0)).mean().sort_values(ascending=False)[:position_limit].index
+            target_assets = forecast_return.loc[target_date,target_assets].sort_values(ascending=False)[:position_limit].index
 
         noa = len(target_assets)
-        # if noa <= position_limit:
-        #     position_limit = noa
         logger.debug('target assets: %s', target_assets.shape)
 
         # use the mean return prior target date as the predicted return temperarily
         # will use the forecasted return as ultimate goal
-        asset_expected_return = forecast_return.loc[:target_date, target_assets].fillna(0)
-        rets_mean = log_ret(asset_expected_return).mean()
+        rets_mean = forecast_return.loc[target_date, target_assets]
 
         # get delta on the target date, which is a diagonal matrix
         diag = delta.loc[target_date, target_assets]
@@ -200,9 +194,6 @@ def convex_optimizer(context,mode,position_limit,forecast_return,original_portfo
 
         # create quadratic form of risk
         risk = cvx.quad_form(f, cov_matrix.values) + cvx.quad_form(w, delta_on_date.values)
-
-        eq_constraint = [cvx.sum_entries(w) == 1,
-                         cvx.norm(w, 1) <= Lmax]
 
         # setup value constraint:
         """
@@ -245,6 +236,8 @@ def convex_optimizer(context,mode,position_limit,forecast_return,original_portfo
         # leverage level and risk adjusted parameter
         Lmax.value = 1
         gamma.value = 1
+        eq_constraint = [cvx.sum_entries(w) == 1,
+                         cvx.norm(w, 1) <= Lmax]
         if mode == gsConst.Const.MinimumRisk:
             # maximize negative product of gamma and risk
             prob_factor = cvx.Problem(cvx.Maximize(-gamma*risk),
@@ -260,13 +253,12 @@ def convex_optimizer(context,mode,position_limit,forecast_return,original_portfo
         prob_factor.solve(verbose=False)
         logger.debug(prob_factor.status)
         if prob_factor.status == 'infeasible':
-            #df_opts_weight.fillna(method='pad', inplace=True)
             df_opts_status.loc[target_date] = gsConst.Const.Infeasible
         else:
             df_opts_weight.loc[target_date, target_assets] = np.array(w.value.astype(np.float64)).T
             df_opts_status.loc[target_date] = gsConst.Const.Feasible
 
-    return {'weight':df_opts_weight.fillna(0), 'status':df_opts_status}
+    return {'weight':df_opts_weight.dropna(axis=0, how='all'), 'status':df_opts_status}
 
 # import datetime
 # time_start = datetime.datetime.now()

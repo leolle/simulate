@@ -39,7 +39,9 @@ lower_with_under _lower_with_under
 lower_with_under
 
 - Classes
-CapWords _CapWords Exceptions CapWords
+CapWords _CapWords
+
+- Exceptions CapWords
 
 - Functions
 lower_with_under() _lower_with_under()
@@ -336,7 +338,8 @@ from Foob import ar
 #+END_SRC
 
 * GS functions/ Python functions
-1. 函数尽量可以做到通用，unless it's a specific  function;
-3. 代码前面写好pseudo code；
-4. 尽量把TEST CASE放在GS。
-5. 为方便函数复用，把数据或者模型参数暴露。
+- 函数尽量可以做到通用，unless it's a specific  function;
+- 代码前面写好pseudo code；
+- 尽量把TEST CASE放在GS。
+- 为方便函数复用，把数据或者模型参数暴露。
+- *use empty functions, write pseudo code instead of any real code, discuss and decide the variable function or names.*
