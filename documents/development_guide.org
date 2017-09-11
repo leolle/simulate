@@ -41,7 +41,8 @@ lower_with_under
 - Classes
 CapWords _CapWords
 
-- Exceptions CapWords
+- Exceptions
+CapWords
 
 - Functions
 lower_with_under() _lower_with_under()
