@@ -344,3 +344,4 @@ from Foob import ar
 - 尽量把TEST CASE放在GS。
 - 为方便函数复用，把数据或者模型参数暴露。
 - *use empty functions, write pseudo code instead of any real code, discuss and decide the variable function or names.*
+- create a bunch of j using fs, which is created by FsDefEditor, drag a fx into fs val, save this fs to a FR, run.
