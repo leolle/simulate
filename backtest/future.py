@@ -40,3 +40,10 @@ if not handler:
 logger.setLevel(logging.DEBUG)
 
 logger.debug('start')
+
+# process input continious data files
+#连续合约价格
+#合约序列标志
+#具体合约价格
+#目标连续合约名称
+
