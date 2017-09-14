@@ -99,7 +99,7 @@ plt.title('Forex seasonality for %s'%month)
 plt.ylabel('Monthly log return')
 sns.boxplot(log_returns.ix[log_returns.index.month==monthinteger])
 ax.autofmt_xdate()
-ax.savefig(result_dir + 'Monthly log return.png')
+ax.savefig(result_dir + 'Monthly log return in %s.png'%month)
 
 """ 
 boxplot monthly log return of a pair from Jan to Dec
