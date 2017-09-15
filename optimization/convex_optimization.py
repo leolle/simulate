@@ -1,5 +1,4 @@
 # coding: utf-8
-from lib.gftTools import gftIO
 import logging
 import numpy as np
 import pandas as pd
