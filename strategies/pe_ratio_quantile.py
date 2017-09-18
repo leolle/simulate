@@ -56,9 +56,9 @@ def get_index(data, ticker, factor):
         start_date = df_factor.index[0]
         df_index = get_index_data(row['ticker'], start_date, datetime.now())
         df_index.to_csv(row['ticker']+'.csv')
-        
 
-get_index(data, ticker, 'PEValue')          
+
+get_index(data, ticker, 'PEValue')
 
 
 import seaborn as sns
@@ -74,51 +74,42 @@ def get_index_data(data, ticker, factor):
         start_date = df_factor.index[0]
         df_index = get_index_data(row['ticker'], start_date, datetime.now())
         df_index.to_csv(row['ticker']+'.csv')
-        
-        
+
+
 def plot_factor(data, ticker, factor):
     for index, row in ticker.iterrows():
         df_factor = data[(data['ticker']==row['ticker'])][factor]
-        #print(df_factor.shape)
         df_factor.dropna(inplace=True)
         idx = df_factor.index
         df_factor = pd.Series(index=idx, data=mstats.winsorize(df_factor, limits=0.025))
-        
-        #df_factor['pe_ratio_adj_by_pct'] = mstats.winsorize(df_factor, limits=0.025)
-        #print(df_factor.name)
+
         start_date = df_factor.index[0]
+        # remove outlier data by quantile
         #df_factor[df_factor>np.percentile(df_factor, 90)] = np.percentile(df_factor, 90)
-        #df_factor = pd.DataFrame(index=idx, data=df_factor)
-        #df_factor = df_factor[(np.abs(stats.zscore(df_factor)) < 3).all()]
-        #df_factor = df_factor.apply(mstats.winsorize,limits=0.005)
-        #df_factor = df_factor.dropna()
+
+        # remove by z score
+        #df_factor = pd.Series(index=idx, df_factor[(np.abs(stats.zscore(df_factor)) < 3).all()])
+
         df_index = get_index_data(row['ticker'], start_date, datetime.now())
         df_index = df_index.set_index(['tradeDate'])
-        #df_index = df_index.ix[idx]
         fig, axes = plt.subplots(1, 1, figsize=(10, 7))
-        #axes[0].boxplot(df_factor)
-        #axes[0].plot(1, df_factor.ix[-1], 'r*', markersize=15.0)
-        
+
         a = str.decode(row['secName'], 'utf-8')
-        
+
         axes.set_title(a)
         df_factor.plot(legend=True)
 
         s_index = df_index['closeIndex']
         s_index.plot(secondary_y=True, style='g', legend=True)
-        
-        #print(df_factor.ix[-1])
-        #print(s_index.shape,df_factor.shape)
-        #print(df_factor)
-        #print(s_index)
-        g = sns.JointGrid(x=df_factor, y=s_index, size=10)  
-        g.plot_joint(sns.regplot, order=2)  
+
+        g = sns.JointGrid(x=df_factor, y=s_index, size=10)
+        g.plot_joint(sns.regplot, order=2)
         plt.axvline(x=df_factor.ix[-1])
         plt.axhline(y=s_index.ix[-1])
-        g.plot_marginals(sns.distplot)  
+        g.plot_marginals(sns.distplot)
 
-        
-        f, (ax_box, ax_hist) = plt.subplots(2, sharex=True, 
+
+        f, (ax_box, ax_hist) = plt.subplots(2, sharex=True,
                                     gridspec_kw={"height_ratios": (.15, .85)})
         plt.axvline(x=df_factor.ix[-1])
         sns.boxplot(df_factor, ax=ax_box)
@@ -128,7 +119,7 @@ def plot_factor(data, ticker, factor):
         sns.despine(ax=ax_hist)
         sns.despine(ax=ax_box, left=True)
 
-plot_factor(data, ticker, 'PEValue')        
+plot_factor(data, ticker, 'PEValue')
 
 import pandas as pd
 df_index = get_index_data(u'000001', u"20080101", datetime.now())
@@ -179,5 +170,4 @@ def plot_index(data, ticker, factor):
         signal.plot()
         s_index.plot(secondary_y=True, style='k', legend=True)
 
-plot_index(data, ticker, 'PEValue')     
-
+plot_index(data, ticker, 'PEValue')
