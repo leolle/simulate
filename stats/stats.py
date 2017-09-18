@@ -704,7 +704,9 @@ def PNLFitness(df_single_period_return, f_risk_free_rate, benchmark_ret, holding
         result[gsConst.Const.BenchmarStdReturn] = return_std(benchmark_ret)
         result[gsConst.Const.BenchmarkMaxDrawdownRate] = cal_max_dd(benchmark_ret)
         result[gsConst.Const.BenchmarkCumulativeReturn] = cum_returns(benchmark_ret)
-        result[gsConst.Const.ExcessAnnualReturn] = excess_return(df_single_period_return, benchmark_ret, period=periods)
+        result[gsConst.Const.ExcessAnnualReturn] = excess_annual_return(df_single_period_return, benchmark_ret, period=periods)
+        result[gsConst.Const.ExcessSinglePeriodReturns] = excess_single_period_return(df_single_period_return, benchmark_ret)
+        result[gsConst.Const.ExcessCumulativeReturns] = excess_cumulative_return(df_single_period_return, benchmark_ret)
 
     return result
 
@@ -782,7 +784,7 @@ if len(benchmark_ret) > 1:
     result[gsConst.Const.ExcessCumulativeReturns] = excess_cumulative_return(df_single_period_return, benchmark_ret)
     result[gsConst.Const.ExcessAnnualReturn] = excess_annual_return(df_single_period_return, benchmark_ret, period=periods)
 
-print (result)
+print(result)
 
 # if __name__ == '__main__':
 #     path = '../data/'
