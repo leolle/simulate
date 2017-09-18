@@ -47,3 +47,4 @@ logger.debug('start')
 #具体合约价格
 #目标连续合约名称
 
+import abupy
