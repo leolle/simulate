@@ -1,9 +1,10 @@
 # -*- coding: utf-8 -*-
 import pandas as pd
 import numpy as np
-
+import os
 from lib.gftTools import gftIO
 from lib.gftTools import gsConst
+
 
 def cal_max_dd(df_single_return):
     """
@@ -56,14 +57,14 @@ def cum_returns(df_single_return):
 
     df_cum = (df_single_return + 1).cumprod(axis=0) - 1
 
-#    cum_val = np.array(df_cum)
-    #print(type(cum_val))
 
 #    return cum_val[-1][-1]
-    return df_cum.ix[-1].values[-1].astype(np.float)
+    if df_cum.shape[1] == 1:
+        return df_cum.ix[-1].values[-1].astype(np.float)
+    else:
+        return df_cum.iloc[-1,:].values.astype(np.float)
 
-
-def annual_return(df_single_return, period=gsConst.Const.DAILY):
+def annual_return(df_single_return, period):
     """Determines the mean annual growth rate of returns.
 
     Parameters
@@ -95,7 +96,7 @@ def annual_return(df_single_return, period=gsConst.Const.DAILY):
     return f_annual_return
 
 
-def sharpe_ratio(df_single_returns, f_risk_free_rate):
+def sharpe_ratio(df_single_returns, f_risk_free_rate, period):
     """
     Determines the Sharpe ratio of a strategy.
 
@@ -119,13 +120,12 @@ def sharpe_ratio(df_single_returns, f_risk_free_rate):
     if len(df_single_returns) < 2:
         return np.nan
 
-    annual_ret = annual_return(df_single_returns)
-    annual_vol = annual_volatility(df_single_returns)
+    annual_ret = annual_return(df_single_returns, period)
+    annual_vol = annual_volatility(df_single_returns, period)
     return (annual_ret - f_risk_free_rate) / annual_vol
 
 
-def sortino_ratio(df_single_returns, required_return=0,
-                  _downside_risk=None):
+def sortino_ratio(df_single_returns, required_return, period):
     """
     Determines the Sortino ratio of a strategy.
 
@@ -144,10 +144,9 @@ def sortino_ratio(df_single_returns, required_return=0,
     if len(df_single_returns) < 2:
         return np.nan
 
-    f_mu = annual_return(df_single_returns)
+    f_mu = annual_return(df_single_returns, period)
 
-    dsr = (_downside_risk if _downside_risk is not None
-           else annual_downside_risk(df_single_returns))
+    dsr = annual_downside_risk(df_single_returns, period)
     sortino = (f_mu - required_return) / dsr
 
     return sortino
@@ -255,7 +254,7 @@ def int_trading_days(df_single_returns):
     return trading_days
 
 
-def annual_volatility(df_single_returns, period=gsConst.Const.DAILY):
+def annual_volatility(df_single_returns, period):
     """
     Determines the annual volatility of a strategy.
 
@@ -415,7 +414,9 @@ def average_holding_num_percentage(df_holding, df_universe):
     if len(df_holding) < 1:
         return np.nan
 
-    avg_holding_num_pct = (df_holding.count(axis=1) / df_universe.ix[df_holding.index].count(axis=1)).mean()
+    df_count = df_universe.ix[df_holding.index].count(axis=1)
+    df_count = df_count[df_count > 0]
+    avg_holding_num_pct = (df_holding.count(axis=1) / df_count).mean()
 
     return avg_holding_num_pct
 
@@ -440,14 +441,15 @@ def latest_holding_num_percentage(df_holding, df_universe):
     if len(df_holding) < 1:
         return np.nan
 
+
     latest_holding_num_pct = (df_holding.count(axis=1).ix[-1] / df_universe.ix[df_holding.index].count(axis=1)).ix[-1]
 
     return latest_holding_num_pct
 
 
-def excess_return(df_single_return, benchmark_ret):
+def excess_annual_return(df_single_return, benchmark_ret, period):
     """
-    Determines the excess return for a strategy vs benchmark.
+    Determines the excess annual return for a strategy vs benchmark.
 
     Parameters
     ----------
@@ -465,9 +467,67 @@ def excess_return(df_single_return, benchmark_ret):
     if len(df_single_return) < 1:
         return np.nan
 
-    ex_ret = annual_return((df_single_return - benchmark_ret).dropna())
+    ret_diff = (df_single_return - benchmark_ret).dropna()
+    if len(ret_diff) < 1:
+        raise ValueError("check length of single return and benchmark return")
+    ex_ret = annual_return(ret_diff, period)
 
     return ex_ret
+
+
+def excess_single_period_return(df_single_return, benchmark_ret):
+    """
+    Determines the excess single period return for a strategy vs benchmark.
+
+    Parameters
+    ----------
+    df_holding : pd.DataFrame or np.ndarray
+        Historical holding of the strategy.
+    benchmark_ret : pd.DataFrame or np.ndarray
+        Benchmark returns.
+
+    Returns
+    -------
+    float
+        excess return.
+    """
+
+    if len(df_single_return) < 1:
+        return np.nan
+
+    ret_diff = (df_single_return - benchmark_ret).dropna()
+    if len(ret_diff) < 1:
+        raise ValueError("check length of single return and benchmark return")
+
+    return ret_diff
+
+
+def excess_cumulative_return(df_single_return, benchmark_ret):
+    """
+    Determines the excess cumulative returns for a strategy vs benchmark.
+
+    Parameters
+    ----------
+    df_holding : pd.DataFrame or np.ndarray
+        Historical holding of the strategy.
+    benchmark_ret : pd.DataFrame or np.ndarray
+        Benchmark returns.
+
+    Returns
+    -------
+    float
+        excess return.
+    """
+
+    if len(df_single_return) < 1:
+        return np.nan
+
+    ret_diff = (df_single_return - benchmark_ret).dropna()
+    if len(ret_diff) < 1:
+        raise ValueError("check length of single return and benchmark return")
+    df_cum = (ret_diff + 1).cumprod(axis=0) - 1
+
+    return df_cum
 
 
 def aggregate_returns(df_single_return, convert_to):
@@ -479,7 +539,7 @@ def aggregate_returns(df_single_return, convert_to):
     df_single_return : pd.DataFrame
         Daily returns of the strategy, noncumulative.
     convert_to : int
-        Can be '1 day', '1 month': 30days, '3 months': 90days, '6 months': 180days, 
+        Can be '1 day', '1 month': 30days, '3 months': 90days, '6 months': 180days,
         '1 year': 365days, '3 years': 1095days.
 
     Returns
@@ -490,8 +550,8 @@ def aggregate_returns(df_single_return, convert_to):
 
     def cumulate_returns(x):
         return cum_returns(x)
-    
-    last_day = df_single_period_return.index[-1]
+
+    last_day = df_single_return.index[-1]
 
     return cumulate_returns(df_single_return.ix[(last_day- pd.to_timedelta("%sday"%convert_to)):])
 
@@ -508,19 +568,22 @@ def portfolio_market_ratio(df_holding, df_market_price, df_market_capital):
         Historical market close price from 1990.
     df_market_capital:
         Historical market capital from 1990
-        
+
     Returns
     -------
     float
         Portfolio Value Market Capital Ratio.
     """
+    if len(df_market_price) < 1 or len(df_market_price) < 1:
+        return np.nan
+
     date_range = df_holding.index
-    
+
     df_holding_value = (df_holding * df_market_price.ix[date_range])
     df_weight = df_holding_value.divide(df_holding_value.sum(axis=1), axis=0)
     df_portfolio_market_ratio = (df_weight * df_market_capital.ix[date_range]).\
                                 sum(axis=1)/df_market_capital.ix[date_range].sum(axis=1)
-                                    
+
     return df_portfolio_market_ratio.mean()
 
 
@@ -540,15 +603,16 @@ def holding_dispersion_std(df_holding, df_market_price, period=gsConst.Const.DAI
     float
         standard deviation.
     """
-    if len(df_holding) < 1:
+    if len(df_market_price) < 1:
         return np.nan
+
     date_range = df_holding.index
-    
+
     df_holding_value = (df_holding * df_market_price.ix[date_range])
     df_holding_value = df_holding_value.fillna(method='ffill')
     df_holding_ret = df_holding_value / df_holding_value.shift(1) - 1
     df_holding_ret = df_holding_ret
-    
+
     if np.any(np.isnan(df_holding_ret)):
         df_single_return = df_holding_ret.copy()
         df_single_return[np.isnan(df_single_return)] = 0.
@@ -613,60 +677,112 @@ def PNLFitness(df_single_period_return, f_risk_free_rate, benchmark_ret, holding
     result[gsConst.Const.EndDate] = df_single_period_return.index[-1]
     result[gsConst.Const.MaxDrawdownRate] = cal_max_dd(df_single_period_return)
     result[gsConst.Const.StdReturn] = return_std(df_single_period_return)
-    result[gsConst.Const.SharpeRatio] = sharpe_ratio(df_single_period_return, f_risk_free_rate)
-    result[gsConst.Const.SortinoRatio] = sortino_ratio(df_single_period_return,f_risk_free_rate)
+    result[gsConst.Const.SharpeRatio] = sharpe_ratio(df_single_period_return, f_risk_free_rate, periods)
+    result[gsConst.Const.SortinoRatio] = sortino_ratio(df_single_period_return, required_return=f_risk_free_rate, period=periods)
     result[gsConst.Const.TotalTradingDays] = int_trading_days(df_single_period_return)
-    if len(holding) > 1:
-        result[gsConst.Const.MaxHoldingNum] = max_holding_num(holding)
-        result[gsConst.Const.MinHoldingNum] = min_holding_num(holding)
-        result[gsConst.Const.AverageHoldingNum] = average_holding_num(holding)
-        result[gsConst.Const.LatestHoldingNum] = latest_holding_num(holding)
-        result[gsConst.Const.AverageHoldingNum] = average_holding_num(holding)
-        result[gsConst.Const.AverageHoldingNumPercentage] = average_holding_num_percentage(holding, market_capital)
-        result[gsConst.Const.LatestHoldingNumPercentage] = latest_holding_num_percentage(holding, market_capital)
+    result[gsConst.Const.MaxHoldingNum] = max_holding_num(holding)
+    result[gsConst.Const.MinHoldingNum] = min_holding_num(holding)
+    result[gsConst.Const.AverageHoldingNum] = average_holding_num(holding)
+    result[gsConst.Const.LatestHoldingNum] = latest_holding_num(holding)
+    result[gsConst.Const.AverageHoldingNum] = average_holding_num(holding)
+    if closing_price is not None:
+        result[gsConst.Const.AverageHoldingNumPercentage] = average_holding_num_percentage(holding, closing_price)
+        result[gsConst.Const.LatestHoldingNumPercentage] = latest_holding_num_percentage(holding, closing_price)
+        result[gsConst.Const.PortfolioValueMarketCapitalRatio] = portfolio_market_ratio(holding, closing_price, market_capital)
+        result[gsConst.Const.AnnualReturnDispersionAverage] = holding_dispersion_std(holding, closing_price, period=periods)
+    result[gsConst.Const.AggregateReturnOneDay] = aggregate_returns(df_single_period_return, 0)
+    result[gsConst.Const.AggregateReturnOneMonth] = aggregate_returns(df_single_period_return, 30)
+    result[gsConst.Const.AggregateReturnThreeMonth] = aggregate_returns(df_single_period_return, 90)
+    result[gsConst.Const.AggregateReturnSixMonth] = aggregate_returns(df_single_period_return, 180)
+    result[gsConst.Const.AggregateReturnOneYear] = aggregate_returns(df_single_period_return, 365)
+    result[gsConst.Const.AggregateReturnThreeYear] = aggregate_returns(df_single_period_return, 1095)
 
-    if len(benchmark_ret)>1:
+    if len(benchmark_ret) > 1:
         result[gsConst.Const.BenchmarkAnnualReturn] = annual_return(benchmark_ret, period=periods)
-        result[gsConst.Const.BenchmarkSharpeRatio] = sharpe_ratio(benchmark_ret, f_risk_free_rate)
+        result[gsConst.Const.BenchmarkSharpeRatio] = sharpe_ratio(benchmark_ret, f_risk_free_rate, periods)
         result[gsConst.Const.BenchmarkAnnualVolatility] = annual_volatility(benchmark_ret, period=periods)
         result[gsConst.Const.BenchmarStdReturn] = return_std(benchmark_ret)
         result[gsConst.Const.BenchmarkMaxDrawdownRate] = cal_max_dd(benchmark_ret)
         result[gsConst.Const.BenchmarkCumulativeReturn] = cum_returns(benchmark_ret)
-        result[gsConst.Const.ExcessAnnualReturn] = excess_return(df_single_period_return, benchmark_ret)
-       if len(holding) > 1:
-            result[gsConst.Const.PortfolioValueMarketCapitalRatio] = portfolio_market_ratio(holding, closing_price, market_capital)
+        result[gsConst.Const.ExcessAnnualReturn] = excess_return(df_single_period_return, benchmark_ret, period=periods)
 
     return result
-# if __name__ == '__main__':
-#     data = [100, 101, 100, 101, 102, 103, 104, 105, 106, 107]
-#     dates = pd.date_range('1/1/2000', periods=10)
-#     df_price = pd.DataFrame(data, index=dates, columns=['price'])
-#     df_single_period_return = df_price / df_price.shift(1) - 1
-#     f_risk_free_rate = 0.015
-#     result = PNLFitness(df_single_period_return, f_risk_free_rate)
+
+
+path = r'/home/weiwu/projects/simulate/data/stats/'
+df_single_period_return = gftIO.zload(path + 'df_single_period_return.pkl')
+f_risk_free_rate = gftIO.zload(path + 'f_risk_free_rate.pkl')
+benchmark_ret = gftIO.zload(path + 'benchmark_ret.pkl')
+holding = gftIO.zload(path + 'holding.pkl')
+closing_price = gftIO.zload(path + 'closing_price.pkl')
+market_capital = gftIO.zload(path + 'market_capital.pkl')
+
+if isinstance(df_single_period_return, gftIO.GftTable):
+    df_single_period_return = df_single_period_return.asMatrix().copy()
+
+if isinstance(benchmark_ret, gftIO.GftTable):
+    benchmark_ret = benchmark_ret.asMatrix().copy()
+
+if isinstance(holding, gftIO.GftTable):
+    holding = holding.asMatrix().copy()
+
+if isinstance(closing_price, gftIO.GftTable):
+    closing_price = closing_price.asMatrix().copy()
+
+if isinstance(market_capital, gftIO.GftTable):
+    market_capital = market_capital.asMatrix().copy()
+
+dt_diff = df_single_period_return.index.to_series().diff().mean()
+if dt_diff < pd.Timedelta('3 days'):
+    periods = gsConst.Const.DAILY
+elif dt_diff > pd.Timedelta('3 days') and dt_diff < pd.Timedelta('10 days'):
+    periods = gsConst.Const.WEEKLY
+else:
+    periods = gsConst.Const.MONTHLY
+
 
 result = {}
-import pickle
+result[gsConst.Const.AnnualReturn] = annual_return(df_single_period_return, period=periods)
+result[gsConst.Const.AnnualVolatility] = annual_volatility(df_single_period_return, period=periods)
+result[gsConst.Const.AnnualDownVolatility] = annual_downside_risk(df_single_period_return, period=periods)
+result[gsConst.Const.CumulativeReturn] = cum_returns(df_single_period_return)
+result[gsConst.Const.DownStdReturn] = downside_std(df_single_period_return)
+result[gsConst.Const.StartDate] = df_single_period_return.index[0]
+result[gsConst.Const.EndDate] = df_single_period_return.index[-1]
+result[gsConst.Const.MaxDrawdownRate] = cal_max_dd(df_single_period_return)
+result[gsConst.Const.StdReturn] = return_std(df_single_period_return)
+result[gsConst.Const.SharpeRatio] = sharpe_ratio(df_single_period_return, f_risk_free_rate, periods)
+result[gsConst.Const.SortinoRatio] = sortino_ratio(df_single_period_return, required_return=f_risk_free_rate, period=periods)
+result[gsConst.Const.TotalTradingDays] = int_trading_days(df_single_period_return)
+result[gsConst.Const.MaxHoldingNum] = max_holding_num(holding)
+result[gsConst.Const.MinHoldingNum] = min_holding_num(holding)
+result[gsConst.Const.AverageHoldingNum] = average_holding_num(holding)
+result[gsConst.Const.LatestHoldingNum] = latest_holding_num(holding)
+result[gsConst.Const.AverageHoldingNum] = average_holding_num(holding)
+if closing_price is not None:
+    result[gsConst.Const.AverageHoldingNumPercentage] = average_holding_num_percentage(holding, closing_price)
+    result[gsConst.Const.LatestHoldingNumPercentage] = latest_holding_num_percentage(holding, closing_price)
+    result[gsConst.Const.PortfolioValueMarketCapitalRatio] = portfolio_market_ratio(holding, closing_price, market_capital)
+    result[gsConst.Const.AnnualReturnDispersionAverage] = holding_dispersion_std(holding, closing_price, period=periods)
+result[gsConst.Const.AggregateReturnOneDay] = aggregate_returns(df_single_period_return, 0)
+result[gsConst.Const.AggregateReturnOneMonth] = aggregate_returns(df_single_period_return, 30)
+result[gsConst.Const.AggregateReturnThreeMonth] = aggregate_returns(df_single_period_return, 90)
+result[gsConst.Const.AggregateReturnSixMonth] = aggregate_returns(df_single_period_return, 180)
+result[gsConst.Const.AggregateReturnOneYear] = aggregate_returns(df_single_period_return, 365)
+result[gsConst.Const.AggregateReturnThreeYear] = aggregate_returns(df_single_period_return, 1095)
 
-path = '~/projects/simulate/data/stats/'
-x0 = pickle.load(path + 'x4.pkl')
+if len(benchmark_ret) > 1:
+    result[gsConst.Const.BenchmarkAnnualReturn] = annual_return(benchmark_ret, period=periods)
+    result[gsConst.Const.BenchmarkSharpeRatio] = sharpe_ratio(benchmark_ret, f_risk_free_rate, periods)
+    result[gsConst.Const.BenchmarkAnnualVolatility] = annual_volatility(benchmark_ret, period=periods)
+    result[gsConst.Const.BenchmarStdReturn] = return_std(benchmark_ret)
+    result[gsConst.Const.BenchmarkMaxDrawdownRate] = cal_max_dd(benchmark_ret)
+    result[gsConst.Const.BenchmarkCumulativeReturn] = cum_returns(benchmark_ret)
+    result[gsConst.Const.ExcessSinglePeriodReturns] = excess_single_period_return(df_single_period_return, benchmark_ret)
+    result[gsConst.Const.ExcessCumulativeReturns] = excess_cumulative_return(df_single_period_return, benchmark_ret)
+    result[gsConst.Const.ExcessAnnualReturn] = excess_annual_return(df_single_period_return, benchmark_ret, period=periods)
 
-# result['annualized_return'] = annual_return(df_single_period_return)
-# result['annualized_volatility'] = annual_volatility(df_single_period_return)
-# result['annualized_downrisk_vol'] = annual_downside_risk(
-#     df_single_period_return)
-# result['cumlative_return'] = cum_returns(df_single_period_return)
-# result['downside_std'] = downside_std(df_single_period_return)
-# result['start_date'] = df_single_period_return.index[0]
-# result['end_date'] = df_single_period_return.index[-1]
-# result['max_dd'] = cal_max_dd(df_single_period_return)
-# result['return_std'] = return_std(df_single_period_return)
-# result['sharpe_ratio'] = sharpe_ratio(df_single_period_return,
-#                                       f_risk_free_rate)
-# result['sornito_ratio'] = sortino_ratio(df_single_period_return,
-#                                         f_risk_free_rate)
-# result['trading_days'] = int_trading_days(df_single_period_return)
-# print (result)
+print (result)
 
 # if __name__ == '__main__':
 #     path = '../data/'
