@@ -1,0 +1,5 @@
+SELECT * FROM JYDB.Fut_ContractMain where OptionCode=314 and UpdateTime>'2016-10-20' and ContractName='沪白银连续合约';
+
+SELECT * FROM JYDB.Fut_ContractMain where OptionCode=314;
+
+SELECT * FROM JYDB.Fut_ContractMain where ContractInnerCode=2002843;

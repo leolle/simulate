@@ -60,9 +60,14 @@ def oSet2Hex(oSet):
     return np.apply_along_axis(intTuple2Str, 1, ret.reshape(-1, 1))
 
 transformDict4Name(x10.asMatrix())
-
 #+END_SRC
 
+
+- transfer b char array to GID.
+#+BEGIN_SRC python
+# coding: utf-8
+gftIO.gidInt2Str(b'&90\r@r\xb1Y\x02\x00\x00\x7f\x00\x00\x00\xe1')
+#+END_SRC
 ** show files:
 #+BEGIN_SRC python
 ! ls /home/gft/work/lib/gftTools/
@@ -277,3 +282,9 @@ To specify a portfolio optimization problem, you need the following:
 当输入的限制条件无法使得系统得出目标最优解时，会提示原因，找到何种限制条件无法满足。
 * simulation/backtest
 * factor tests
+* strategy
+
+** monitor global etf performance
+*** TODO fetch global etf data
+- [ ] use threading to do multi-task. Fully understanding threading.
+*** use PCA to get most dominant stocks.

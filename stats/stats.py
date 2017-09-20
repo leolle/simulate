@@ -705,9 +705,7 @@ def PNLFitness(df_single_period_return, f_risk_free_rate, benchmark_ret, holding
         result[gsConst.Const.BenchmarkMaxDrawdownRate] = cal_max_dd(benchmark_ret)
         result[gsConst.Const.BenchmarkCumulativeReturn] = cum_returns(benchmark_ret)
         result[gsConst.Const.ExcessAnnualReturn] = excess_annual_return(df_single_period_return, benchmark_ret, period=periods)
-        result[gsConst.Const.ExcessSinglePeriodReturns] = excess_single_period_return(df_single_period_return, benchmark_ret)
-        result[gsConst.Const.ExcessCumulativeReturns] = excess_cumulative_return(df_single_period_return, benchmark_ret)
-
+ 
     return result
 
 
@@ -795,3 +793,113 @@ print(result)
 #     result = U_PNL_FITNESS(df_single_period_return, f_risk_free_rate)
 
 #     print(result)
+
+
+def PnLFitness(df_single_period_return,f_risk_free_rate,df_benchmark_ret):
+    """
+    calculate pnl fitness for a strategy.
+
+    Parameters
+    ----------
+    df_single_returns : pd.Series or np.ndarray
+        Periodic returns of the strategy, noncumulative.
+
+    Returns
+    -------
+    result, dictionary
+        fitness of returns.
+    """
+    if isinstance(df_single_period_return, gftIO.GftTable):
+        df_single_period_return = df_single_period_return.asMatrix()
+    if isinstance(df_benchmark_ret, gftIO.GftTable):
+        df_benchmark_ret = df_benchmark_ret.asMatrix()
+
+    # to check the frequency of the strategy, DAILY or MONTHLY
+    dt_diff = df_single_period_return.index.to_series().diff().mean()
+    if dt_diff < pd.Timedelta('3 days'):
+        periods = gsConst.Const.DAILY
+    elif dt_diff > pd.Timedelta('3 days') and dt_diff < pd.Timedelta('10 days'):
+        periods = gsConst.Const.WEEKLY
+    else:
+        periods = gsConst.Const.MONTHLY
+
+    result = {}
+    result[gsConst.Const.AnnualReturn] = annual_return(df_single_period_return, period=periods)
+    result[gsConst.Const.AnnualVolatility] = annual_volatility(df_single_period_return, period=periods)
+    result[gsConst.Const.AnnualDownVolatility] = annual_downside_risk(df_single_period_return, period=periods)
+    result[gsConst.Const.CumulativeReturn] = cum_returns(df_single_period_return)
+    result[gsConst.Const.DownStdReturn] = downside_std(df_single_period_return)
+    result[gsConst.Const.StartDate] = df_single_period_return.index[0]
+    result[gsConst.Const.EndDate] = df_single_period_return.index[-1]
+    result[gsConst.Const.MaxDrawdownRate] = cal_max_dd(df_single_period_return)
+    result[gsConst.Const.StdReturn] = return_std(df_single_period_return)
+    result[gsConst.Const.SharpeRatio] = sharpe_ratio(df_single_period_return, f_risk_free_rate, periods)
+    result[gsConst.Const.SortinoRatio] = sortino_ratio(df_single_period_return, required_return=f_risk_free_rate, period=periods)
+    result[gsConst.Const.AggregateReturnOneDay] = aggregate_returns(df_single_period_return, 0)
+    result[gsConst.Const.AggregateReturnOneMonth] = aggregate_returns(df_single_period_return, 30)
+    result[gsConst.Const.AggregateReturnThreeMonth] = aggregate_returns(df_single_period_return, 90)
+    result[gsConst.Const.AggregateReturnSixMonth] = aggregate_returns(df_single_period_return, 180)
+    result[gsConst.Const.AggregateReturnOneYear] = aggregate_returns(df_single_period_return, 365)
+    result[gsConst.Const.AggregateReturnThreeYear] = aggregate_returns(df_single_period_return, 1095)
+
+    if len(df_benchmark_ret) > 1:
+        result[gsConst.Const.BenchmarkAnnualReturn] = annual_return(benchmark_ret, period=periods)
+        result[gsConst.Const.BenchmarkSharpeRatio] = sharpe_ratio(benchmark_ret, f_risk_free_rate, periods)
+        result[gsConst.Const.BenchmarkAnnualVolatility] = annual_volatility(benchmark_ret, period=periods)
+        result[gsConst.Const.BenchmarStdReturn] = return_std(benchmark_ret)
+        result[gsConst.Const.BenchmarkMaxDrawdownRate] = cal_max_dd(benchmark_ret)
+        result[gsConst.Const.BenchmarkCumulativeReturn] = cum_returns(benchmark_ret)
+        result[gsConst.Const.ExcessAnnualReturn] = excess_annual_return(df_single_period_return, benchmark_ret, period=periods)
+
+    return result
+
+
+def HoldingFitness(holding,closing_price,market_capital):
+    """
+    calculate holding fitness for a strategy.
+
+    Parameters
+    ----------
+    holding : pd.DataFrame or np.ndarray
+        holding position of a strategy.
+    closing_price: pd.DataFrame
+        closing price of stocks in the portfolio.
+    market_capital: pd.DataFrame
+        market capital of stocks in the portfolio.
+
+    Returns
+    -------
+    result, dictionary
+        fitness of returns.
+    """
+    if isinstance(holding, gftIO.GftTable):
+        holding = holding.asMatrix()
+    if isinstance(closing_price, gftIO.GftTable):
+        closing_price = closing_price.asMatrix()
+    if isinstance(market_capital, gftIO.GftTable):
+        market_capital = market_capital.asMatrix()
+
+    # to check the frequency of the strategy, DAILY or MONTHLY
+    dt_diff = holding.index.to_series().diff().mean()
+    if dt_diff < pd.Timedelta('3 days'):
+        periods = gsConst.Const.DAILY
+    elif dt_diff > pd.Timedelta('3 days') and dt_diff < pd.Timedelta('10 days'):
+        periods = gsConst.Const.WEEKLY
+    else:
+        periods = gsConst.Const.MONTHLY
+
+    result = {}
+    result[gsConst.Const.MaxHoldingNum] = max_holding_num(holding)
+    result[gsConst.Const.MinHoldingNum] = min_holding_num(holding)
+    result[gsConst.Const.AverageHoldingNum] = average_holding_num(holding)
+    result[gsConst.Const.LatestHoldingNum] = latest_holding_num(holding)
+    result[gsConst.Const.AverageHoldingNum] = average_holding_num(holding)
+
+    if closing_price is not None:
+        result[gsConst.Const.AverageHoldingNumPercentage] = average_holding_num_percentage(holding, closing_price)
+        result[gsConst.Const.LatestHoldingNumPercentage] = latest_holding_num_percentage(holding, closing_price)
+        if market_capital is not None:
+            result[gsConst.Const.PortfolioValueMarketCapitalRatio] = portfolio_market_ratio(holding, closing_price, market_capital)
+        result[gsConst.Const.AnnualReturnDispersionAverage] = holding_dispersion_std(holding, closing_price, period=periods)
+
+    return result
