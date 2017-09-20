@@ -3,7 +3,9 @@ import pandas as pd
 import numpy as np
 import logging
 from lib.gftTools import gsConst, gftIO, gsUtils
-
+from datetime import datetime
+import sys
+import itertools
 
 """
 1) 策略初始化函数
@@ -47,4 +49,21 @@ logger.debug('start')
 #具体合约价格
 #目标连续合约名称
 
-import abupy
+""" 模拟输入信息 """
+dates = pd.date_range('2000-01-01', periods=6)
+industry = ['industry', 'industry', 'utility', 'utility', 'consumer']
+symbols = ['A', 'B', 'C', 'D', 'E']
+zipped = list(zip(industry, symbols))
+index = pd.MultiIndex.from_tuples(zipped)
+
+noa = len(symbols)
+
+data = np.array([[10, 11, 12, 13, 14, 10],
+                 [10, 11, 10, 13, 14, 9],
+                 [10, 10, 12, 13, 9, 11],
+                 [10, 11, 12, 13, 14, 8],
+                 [10, 9, 12, 13, 14, 9]])
+
+market_to_market_price = pd.DataFrame(data.T, index=dates, columns=index)
+rets = market_to_market_price / market_to_market_price.shift(1) - 1.0
+rets = rets.dropna(axis=0, how='all')
