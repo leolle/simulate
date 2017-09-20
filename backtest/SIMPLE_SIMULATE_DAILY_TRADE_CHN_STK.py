@@ -34,7 +34,6 @@ def fill_holding(d, nextd, ls_trade_dates, df_holding, df_holding_cash, df_w_adj
     return result
 
 
-#@numba.jit
 def round_to_lot(size_array, lot_size):
     """round number to the nearest lot_size.
     """
@@ -74,7 +73,7 @@ def simple_simulate_daily_trade_chn_stk(dt_begin, dt_end, initial_holding_positi
             result['TURNOVER']，换手率 TV	monthly
 
     """
-    
+
     result = {}
     const_value = gsConst.Const()
     df_w_target_portfolio_weight = df_w_target_portfolio_weight.asMatrix()
@@ -158,7 +157,7 @@ def simple_simulate_daily_trade_chn_stk(dt_begin, dt_end, initial_holding_positi
     df_w_target_portfolio_weight = df_w_target_portfolio_weight_fill.ix[ls_rebalance_dates].fillna(0)
     ls_all_symbols.pop(-1)
     if (df_w_target_portfolio_weight < 0).any().any():
-        result['error'] = 'input error! Do not support stock short selling and cash borrowing.'        
+        result['error'] = 'input error! Do not support stock short selling and cash borrowing.'
         return result
 
     df_w_initial_holding_cash_weight = df_w_target_portfolio_weight[ls_cashGid]
@@ -218,7 +217,7 @@ def simple_simulate_daily_trade_chn_stk(dt_begin, dt_end, initial_holding_positi
     df_w_holding.ix[d] = df_w_initial_holding.loc[d].tolist()
     df_w_holding_cash.ix[d] = df_w_initial_holding_cash.values[-1]
 
-    
+
     if len(ls_rebalance_dates) < 1:
         nextd = ls_trade_dates[-1]
         adjusted_holding = fill_holding(d, nextd, ls_trade_dates, \
@@ -233,7 +232,7 @@ def simple_simulate_daily_trade_chn_stk(dt_begin, dt_end, initial_holding_positi
                                         df_w_total_return_factor)
         df_w_holding = adjusted_holding['holding']
         df_w_holding_cash = adjusted_holding['holding_cash']
-        
+
 
         for i in range(len(ls_rebalance_dates)):
             d = ls_rebalance_dates[i]
@@ -317,7 +316,7 @@ def simple_simulate_daily_trade_chn_stk(dt_begin, dt_end, initial_holding_positi
     s_cum_rets = df_portfolio_value / num_initial_holding_positionValue - 1.0
     print(s_cum_rets[-1])
     df_portfolio_value.name = ls_getGodGid[0]
-    
+
     result[const_value.Holding] = pd.concat([df_w_holding, df_w_holding_cash], axis=1).replace(0, np.nan)
     result[const_value.PortfolioValue] = df_portfolio_value
     result[const_value.SinglePeriodReturn] = pd.DataFrame(df_w_single_period_ret, columns=[ls_getGodGid])
