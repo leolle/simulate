@@ -8,7 +8,7 @@ import sys
 import itertools
 import quandl
 import os
-
+import matplotlib.pyplot as plt
 """
 1) 策略初始化函数
 
@@ -46,37 +46,37 @@ logger.setLevel(logging.DEBUG)
 logger.debug('start')
 
 """ 模拟输入信息 """
-dates = pd.date_range('2010-01-01', periods=6)
-contract_name = ['gold', 'gold', 'silver', 'silver', 'silver']
-contract_code = ['AU1006', 'AU1009', 'AG1006', 'AG1009', 'AG1012']
-zipped = list(zip(contract_name, contract_code))
-index = pd.MultiIndex.from_tuples(zipped)
+# dates = pd.date_range('2010-01-01', periods=6)
+# contract_name = ['gold', 'gold', 'silver', 'silver', 'silver']
+# contract_code = ['AU1006', 'AU1009', 'AG1006', 'AG1009', 'AG1012']
+# zipped = list(zip(contract_name, contract_code))
+# index = pd.MultiIndex.from_tuples(zipped)
 
-noa = len(contract_code)
+# noa = len(contract_code)
 
-data = np.array([[10, 11, 12, 11, 12, 13],
-                 [np.nan, np.nan, np.nan, 13, 14, 9],
-                 [10, 10, np.nan, np.nan, np.nan, np.nan],
-                 [np.nan, np.nan, 12, 13, np.nan, np.nan],
-                 [np.nan, np.nan, np.nan, np.nan, 14, 9]])
+# data = np.array([[10, 11, 12, 11, 12, 13],
+#                  [np.nan, np.nan, np.nan, 13, 14, 9],
+#                  [10, 10, np.nan, np.nan, np.nan, np.nan],
+#                  [np.nan, np.nan, 12, 13, np.nan, np.nan],
+#                  [np.nan, np.nan, np.nan, np.nan, 14, 9]])
 
-market_to_market_price = pd.DataFrame(data.T, index=dates, columns=index)
-rets = market_to_market_price / market_to_market_price.shift(1) - 1.0
-rets = rets.dropna(axis=0, how='all')
-multiplier_data = np.array([[10]*6,
-                            [10]*6,
-                            [15]*6,
-                            [15]*6,
-                            [15]*6])
-multiplier = pd.DataFrame(multiplier_data.T, index=dates, columns=index)
-targets = ['gold']
-position_data = np.array([[1, 1, 1, 1, 1, 1],
-                 [np.nan, np.nan, np.nan, 1, 1, 1],
-                 [1, 1, np.nan, np.nan, np.nan, np.nan],
-                 [np.nan, np.nan, 1, 1, np.nan, np.nan],
-                 [np.nan, np.nan, np.nan, np.nan, 1, 1]])
+# market_to_market_price = pd.DataFrame(data.T, index=dates, columns=index)
+# rets = market_to_market_price / market_to_market_price.shift(1) - 1.0
+# rets = rets.dropna(axis=0, how='all')
+# multiplier_data = np.array([[10]*6,
+#                             [10]*6,
+#                             [15]*6,
+#                             [15]*6,
+#                             [15]*6])
+# multiplier = pd.DataFrame(multiplier_data.T, index=dates, columns=index)
+# targets = ['gold']
+# position_data = np.array([[1, 1, 1, 1, 1, 1],
+#                  [np.nan, np.nan, np.nan, 1, 1, 1],
+#                  [1, 1, np.nan, np.nan, np.nan, np.nan],
+#                  [np.nan, np.nan, 1, 1, np.nan, np.nan],
+#                  [np.nan, np.nan, np.nan, np.nan, 1, 1]])
 
-position = pd.DataFrame(position_data.T, index=dates, columns=index)
+# position = pd.DataFrame(position_data.T, index=dates, columns=index)
 
 wti_near = pd.read_csv('CLF2014.csv', index_col='Date')
 wti_far = pd.read_csv('CLG2014.csv', index_col='Date')
@@ -180,10 +180,20 @@ if isinstance(data, gftIO.GftTable):
 if isinstance(target, list):
     target = gftIO.strSet2Np(np.array(target))
 
-name = {'INNERCODE': 'contract_name', 'OPTIONCODE': 'contract_code',
+name = {'INNERCODE': 'contract_code', 'OPTIONCODE': 'contract_name',
         'SETTLEMENTDATE': 'settlement_date', 'ENDDATE': 'date',
         'CLOSEPRICE': 'close_price'}
 data.rename(columns=lambda x: name[x], inplace=True)
 
-if target[0] not in data['contract_name']:
-    raise KeyError()
+# check if the target contracts are in the dataset.
+if set(target).issubset(data['contract_name']):
+    target_data = data.loc[data['contract_name'].isin(target)]
+
+rubber = data[data['contract_name'] == target[0]]
+rubber.set_index('date', inplace=True)
+rubber_expiry_dates = rubber[['contract_code', 'settlement_date']].\
+                      drop_duplicates().sort_values('settlement_date')
+rubber_expiry_dates.set_index('contract_code', inplace=True)
+rubber_data = data[data['contract_name'] == target[0]]
+rubber_data = rubber_data.loc[:, ['date', 'contract_code', 'close_price']]
+rubber_data = rubber_data.pivot(index='date', columns='contract_code', values='close_price')
