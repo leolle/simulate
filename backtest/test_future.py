@@ -7,6 +7,7 @@ from datetime import datetime
 import sys
 import itertools
 import quandl
+import os
 
 """
 1) 策略初始化函数
@@ -97,8 +98,8 @@ contract in order to produce a continuous time series futures contract."""
 contracts = wti.columns
 # Construct a sequence of dates beginning from the earliest contract start
 # date to the end date of the final contract
-# dates = pd.date_range(start_date, expiry_dates[-1], freq='B')
-dates = wti_near.index.append(wti_far.index.append(wti_far_far.index))
+dates = pd.date_range(start_date, expiry_dates[-1], freq='B')
+# dates = wti_near.index.append(wti_far.index.append(wti_far_far.index)).unique()
 # Create the 'roll weights' DataFrame that will store the multipliers for
 # each contract (between 0.0 and 1.0)
 roll_weights = pd.DataFrame(np.zeros((len(dates), len(contracts))),
@@ -163,7 +164,26 @@ def futures_rollover_weights(start_date, expiry_dates, contracts, rollover_days=
     return roll_weights
 
 
-weights = futures_rollover_weights(wti_near.index[0], expiry_dates, wti.columns)
+#weights = futures_rollover_weights(wti_near.index[0], expiry_dates, wti.columns)
 # Construct the continuous future of the WTI CL contracts
-wti_cts = (wti * weights).sum(1).dropna()
+#wti_cts = (wti * weights).sum(1).dropna()
 
+path = r'/home/weiwu/projects/simulate/data/future/'
+start_date = gftIO.zload(os.path.join(path, 'start_date.pkl'))
+end_date = gftIO.zload(os.path.join(path, 'end_date.pkl'))
+data = gftIO.zload(os.path.join(path, 'contract_data.pkl'))
+target = gftIO.zload(os.path.join(path, 'target.pkl'))
+
+if isinstance(data, gftIO.GftTable):
+    data = data.asColumnTab().copy()
+
+if isinstance(target, list):
+    target = gftIO.strSet2Np(np.array(target))
+
+name = {'INNERCODE': 'contract_name', 'OPTIONCODE': 'contract_code',
+        'SETTLEMENTDATE': 'settlement_date', 'ENDDATE': 'date',
+        'CLOSEPRICE': 'close_price'}
+data.rename(columns=lambda x: name[x], inplace=True)
+
+if target[0] not in data['contract_name']:
+    raise KeyError()

@@ -21,6 +21,8 @@
 #+END_SRC
 
 ** transfer:
+
+- b char array to GID
 #+BEGIN_SRC python
 
 import pickle, zlib
@@ -61,7 +63,6 @@ def oSet2Hex(oSet):
 
 transformDict4Name(x10.asMatrix())
 #+END_SRC
-
 
 - transfer b char array to GID.
 #+BEGIN_SRC python
