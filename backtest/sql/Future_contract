@@ -1,3 +1,5 @@
 SELECT Fee, ContractName,ContractMonth  FROM JYDB.Fut_FuturesContract where ContractOption=314;
 
 SELECT *  FROM JYDB.Fut_FuturesContract where ContractOption=314;
+
+SELECT *  FROM JYDB.Fut_FuturesContract ;

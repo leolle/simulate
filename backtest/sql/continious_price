@@ -6,7 +6,8 @@ SELECT * FROM JYDB.Fut_DailyQuote where Exchange=10;
 
 SELECT * FROM JYDB.Fut_DailyQuote where InnerCode=2000716;
 
-SELECT dq.EndDate, dq.ContractName, cm.ContractCode , dq.ClosePrice
+SELECT dq.EndDate, dq.ContractName, cm.ContractCode, dq.ClosePrice, dq.SettlementDate
 FROM JYDB.Fut_DailyQuote as dq, JYDB.Fut_ContractMain as cm
 where dq.ContinuumMark=1 and dq.InnerCode=cm.ContractInnerCode
+and dq.Exchange=10
 and dq.EndDate>'20151010';
