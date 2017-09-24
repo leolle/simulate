@@ -4,11 +4,10 @@ import numpy as np
 import logging
 from lib.gftTools import gsConst, gftIO, gsUtils
 from datetime import datetime
-import sys
-import itertools
 import quandl
 import os
 import matplotlib.pyplot as plt
+from future_position import create_future_rollover_position as rp
 """
 1) 策略初始化函数
 
@@ -44,39 +43,6 @@ if not handler:
 logger.setLevel(logging.DEBUG)
 
 logger.debug('start')
-
-""" 模拟输入信息 """
-# dates = pd.date_range('2010-01-01', periods=6)
-# contract_name = ['gold', 'gold', 'silver', 'silver', 'silver']
-# contract_code = ['AU1006', 'AU1009', 'AG1006', 'AG1009', 'AG1012']
-# zipped = list(zip(contract_name, contract_code))
-# index = pd.MultiIndex.from_tuples(zipped)
-
-# noa = len(contract_code)
-
-# data = np.array([[10, 11, 12, 11, 12, 13],
-#                  [np.nan, np.nan, np.nan, 13, 14, 9],
-#                  [10, 10, np.nan, np.nan, np.nan, np.nan],
-#                  [np.nan, np.nan, 12, 13, np.nan, np.nan],
-#                  [np.nan, np.nan, np.nan, np.nan, 14, 9]])
-
-# market_to_market_price = pd.DataFrame(data.T, index=dates, columns=index)
-# rets = market_to_market_price / market_to_market_price.shift(1) - 1.0
-# rets = rets.dropna(axis=0, how='all')
-# multiplier_data = np.array([[10]*6,
-#                             [10]*6,
-#                             [15]*6,
-#                             [15]*6,
-#                             [15]*6])
-# multiplier = pd.DataFrame(multiplier_data.T, index=dates, columns=index)
-# targets = ['gold']
-# position_data = np.array([[1, 1, 1, 1, 1, 1],
-#                  [np.nan, np.nan, np.nan, 1, 1, 1],
-#                  [1, 1, np.nan, np.nan, np.nan, np.nan],
-#                  [np.nan, np.nan, 1, 1, np.nan, np.nan],
-#                  [np.nan, np.nan, np.nan, np.nan, 1, 1]])
-
-# position = pd.DataFrame(position_data.T, index=dates, columns=index)
 
 # wti_near = pd.read_csv('CLF2014.csv', index_col='Date')
 # wti_far = pd.read_csv('CLG2014.csv', index_col='Date')
@@ -147,6 +113,19 @@ start_date = gftIO.zload(os.path.join(path, 'start_date.pkl'))
 end_date = gftIO.zload(os.path.join(path, 'end_date.pkl'))
 data = gftIO.zload(os.path.join(path, 'contract_data.pkl'))
 target = gftIO.zload(os.path.join(path, 'target.pkl'))
+df_commission = gftIO.zload(os.path.join(path, 'df_commission_fee.pkl'))
+df_position = gftIO.zload(os.path.join(path, 'df_position.pkl'))
+df_price = gftIO.zload(os.path.join(path, 'df_price.pkl'))
+df_multiplier = gftIO.zload(os.path.join(path, 'df_multiplier.pkl'))
+
+if isinstance(df_commission, gftIO.GftTable):
+    df_commission = df_commission.asColumnTab().copy()
+if isinstance(df_position, gftIO.GftTable):
+    df_position = df_position.asMatrix().copy()
+if isinstance(df_price, gftIO.GftTable):
+    df_price = df_price.asColumnTab().copy()
+if isinstance(df_multiplier, gftIO.GftTable):
+    df_multiplier = df_multiplier.asColumnTab().copy()
 
 if isinstance(data, gftIO.GftTable):
     data = data.asColumnTab().copy()
@@ -163,7 +142,7 @@ data.rename(columns=lambda x: name[x], inplace=True)
 if set(target).issubset(data['contract_name']):
     target_data = data.loc[data['contract_name'].isin(target)]
 
-roll_weights = pd.DataFrame()
+roll_position = pd.DataFrame()
 for contract in target:
     contract_data = data[data['contract_name'] == contract]
     # contract_data.set_index('date', inplace=True)
@@ -193,10 +172,116 @@ for contract in target:
         else:
             contract_roll_weights.ix[prev_date:, item] = 1
         prev_date = ex_date
-    roll_weights = pd.concat([roll_weights, contract_roll_weights], axis=1)
+    roll_position = pd.concat([roll_position, contract_roll_weights], axis=1)
 
-roll_weights = roll_weights.loc[start_date:end_date]
-value = (contract_data * contract_roll_weights).sum(1)
+roll_position = roll_position.loc[start_date:end_date]
+df_position.replace(to_replace=0, value=np.nan, inplace=True)
+#df_position.dropna(axis=0, how='all', inplace=True)
+contract_data = contract_data.loc[start_date:end_date]
+df_position = df_position.loc[start_date:end_date]
 # Construct the continuous future of the WTI CL contracts
 # wti_cts = (wti * rubber_roll_weights).sum(1).dropna()
 
+df_multiplier_name = {'CMVALUE': 'multiplier', 'CONTRACTINNERCODE': 'contract_code',
+                      'CTIME': 'date', 'OPTIONCODE': 'contract_name'}
+df_multiplier.rename(columns=lambda x: df_multiplier_name[x], inplace=True)
+df_multiplier.drop_duplicates(subset=['contract_code', 'multiplier'], inplace=True)
+df_multiplier.dropna(how='any', inplace=True)
+df_multiplier = df_multiplier.loc[:, ['contract_code', 'multiplier']]
+df_multiplier.set_index('contract_code', inplace=True)
+df_multiplier = df_multiplier[df_multiplier.columns[0]]
+df_multiplier = pd.DataFrame(data=df_multiplier[roll_position.columns], index=contract_dates, columns=roll_position.columns)
+#df_multiplier = df_multiplier.pivot(index='date', columns='contract_code', values='multiplier')
+#df_multiplier.fillna(method='pad', inplace=True)
+#df_multiplier.fillna(method='bfill', inplace=True)
+value = (contract_data * df_position * df_multiplier).sum(1)
+
+roll_weights = pd.DataFrame()
+
+target_data = data[data['contract_name'] == contract]
+target_expiry_dates = target_data[['contract_code', 'settlement_date']].\
+                        drop_duplicates().sort_values('settlement_date')
+target_expiry_dates.set_index('contract_code', inplace=True)
+target_expiry_dates = target_expiry_dates[target_expiry_dates.columns[0]]
+target_data = target_data.loc[:, ['date', 'contract_code', 'close_price']]
+target_data.groupby('contract_code')['close_price'].apply(lambda x: x.div(x.iloc[0]).subtract(1))
+contract_data = target_data.pivot(index='date', columns='contract_code', values='close_price')
+contracts = contract_data.columns
+contract_start_date = contract_data.index[0]
+contract_dates = contract_data.index
+
+contract_roll_weights = pd.Series(np.ones(len(contract_dates)),
+                                  index=contract_dates,
+                                  name='weight')
+continuous_contract_price = pd.Series(np.ones(len(contract_dates)),
+                                      index=contract_dates,
+                                      name='contract')
+next_to_ex_date = contract_roll_weights.index[0]
+prev_date = contract_roll_weights.index[0]
+# Loop through each contract and create the specific weightings for
+# each contract depending upon the rollover date and price adjusted method.
+# Here for backtesting, we use last trading day rollover and backward ratio price adjustment.
+target_data_with_datetimeindex = target_data.set_index('date')
+price_adjust_ratio = pd.Series(np.ones(len(target_expiry_dates)),
+                               index=target_expiry_dates.values,
+                               name='ratio')
+adjusted_price = pd.Series(index=contract_data.index,
+                           name='adjusted_price')
+for i, (item, ex_date) in enumerate(target_expiry_dates.iteritems()):
+    print(i, item, ex_date)
+    if i < len(contract_expiry_dates) - 1:
+        idx_ex_date = contract_data.index.searchsorted(ex_date)
+        pre_ex_date = contract_dates[idx_ex_date - 1]
+        price_adjust_ratio.ix[ex_date] = target_data_with_datetimeindex['close_price'].ix[ex_date] / target_data_with_datetimeindex['close_price'].ix[pre_ex_date]
+
+for i, (item, ex_date) in enumerate(target_expiry_dates.iteritems()):
+    print(i, item, ex_date)
+    idx_ex_date = contract_data.index.searchsorted(ex_date)
+    pre_ex_date = contract_dates[idx_ex_date - 1]
+    adjusted_price.ix[prev_date:pre_ex_date] = target_data_with_datetimeindex['close_price'].ix[prev_date:pre_ex_date] * price_adjust_ratio.ix[ex_date:].cumprod().iloc[-1]
+    prev_date = ex_date
+contract_data.plot(legend=True)
+adjusted_price.plot(legend=True, style='k--')
+plt.show()
+
+# for i, (item, ex_date) in enumerate(target_expiry_dates.iteritems()):
+
+#     if i == 0:
+#         idx_ex_date = contract_data.index.searchsorted(ex_date)
+#         pre_ex_date = contract_dates[idx_ex_date + 1]
+#         # set first period weight to 1
+#         contract_roll_weights.ix[next_to_ex_date:pre_ex_date] = 1
+#         continuous_contract_price.ix[next_to_ex_date:pre_ex_date] = target_data_with_datetimeindex['close_price'].ix[next_to_ex_date:pre_ex_date] * contract_roll_weights.ix[next_to_ex_date:pre_ex_date]
+#         next_to_ex_date = contract_dates[idx_ex_date + 1]
+#         continue
+#     # elif i > 0 and i > len(contract_expiry_dates) - 1:
+#     elif i < (len(contract_expiry_dates) - 1):
+#         idx_ex_date = contract_data.index.searchsorted(ex_date)
+#         pre_ex_date = contract_dates[idx_ex_date - 1]
+#         # set first period weight to 1
+#         contract_roll_weights.ix[next_to_ex_date:pre_ex_date] = 1
+#         continuous_contract_price.ix[next_to_ex_date:pre_ex_date] = target_data_with_datetimeindex['close_price'].ix[next_to_ex_date:pre_ex_date] * contract_roll_weights.ix[next_to_ex_date:pre_ex_date]
+#         next_to_ex_date = contract_dates[idx_ex_date + 1]
+#     else:
+#         contract_roll_weights.ix[next_to_ex_date:ex_date] = target_data_with_datetimeindex.ix[next_to_ex_date:ex_date]['close_price'].div(target_data_with_datetimeindex['close_price'].ix[pre_ex_date])
+#         continuous_contract_price.ix[next_to_ex_date:ex_date] = target_data_with_datetimeindex['close_price'].ix[next_to_ex_date:ex_date] * contract_roll_weights.ix[next_to_ex_date:ex_date]
+# #continuous_contract_price = target_data_with_datetimeindex['close_price'] * contract_roll_weights
+# for i, (item, ex_date) in enumerate(target_expiry_dates.iteritems()):
+#     print(i, item, ex_date)
+#     if i == 0:
+#         contract_roll_weights.ix[next_to_ex_date:ex_date] = 1
+#         target_data_with_datetimeindex['close_price'].ix[next_to_ex_date:ex_date] = target_data_with_datetimeindex['close_price'].ix[next_to_ex_date:ex_date] * contract_roll_weights.ix[next_to_ex_date:ex_date]
+#         idx_ex_date = contract_data.index.searchsorted(ex_date)
+#         pre_ex_date = contract_dates[idx_ex_date - 1]
+#         next_to_ex_date = contract_dates[idx_ex_date + 1]
+#     # elif i > 0 and i > len(contract_expiry_dates) - 1:
+#     elif i < (len(contract_expiry_dates) - 1):
+#         contract_roll_weights.ix[next_to_ex_date:ex_date] = target_data_with_datetimeindex['close_price'].ix[next_to_ex_date:ex_date].div(target_data_with_datetimeindex['close_price'].ix[pre_ex_date])
+#         target_data_with_datetimeindex['close_price'].ix[next_to_ex_date:ex_date] = target_data_with_datetimeindex['close_price'].ix[next_to_ex_date:ex_date] * contract_roll_weights.ix[next_to_ex_date:ex_date]
+#         idx_ex_date = contract_data.index.searchsorted(ex_date)
+#         pre_ex_date = contract_dates[idx_ex_date - 1]
+#         next_to_ex_date = contract_dates[idx_ex_date + 1]
+#     else:
+#         contract_roll_weights.ix[next_to_ex_date:ex_date] = target_data_with_datetimeindex.ix[next_to_ex_date:ex_date]['close_price'].div(target_data_with_datetimeindex['close_price'].ix[pre_ex_date])
+#         target_data_with_datetimeindex['close_price'].ix[next_to_ex_date:ex_date] = target_data_with_datetimeindex['close_price'].ix[next_to_ex_date:ex_date] * contract_roll_weights.ix[next_to_ex_date:ex_date]
+# #continuous_contract_price = target_data_with_datetimeindex['close_price'] * contract_roll_weights
