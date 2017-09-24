@@ -1,4 +1,6 @@
 # -*- coding: utf-8 -*-
+from ylib import ylog
+import logging
 import pandas as pd
 import numpy as np
 import logging
@@ -106,6 +108,11 @@ def create_continuous_contract(start_date, end_date, contract_data, target):
             'SETTLEMENTDATE': 'settlement_date', 'ENDDATE': 'date',
             'CLOSEPRICE': 'close_price'}
     data.rename(columns=lambda x: name[x], inplace=True)
+    continuous_price = pd.DataFrame()
+
+    if target is None:
+        target = data['contract_name'].unique()
+
     for contract in target:
         target_data = data[data['contract_name'] == contract]
         target_expiry_dates = target_data[['contract_code', 'settlement_date']].\
@@ -113,12 +120,12 @@ def create_continuous_contract(start_date, end_date, contract_data, target):
         target_expiry_dates.set_index('contract_code', inplace=True)
         target_expiry_dates = target_expiry_dates[target_expiry_dates.columns[0]]
         target_data = target_data.loc[:, ['date', 'contract_code', 'close_price']]
-        # contract_data = target_data.pivot(index='date', columns='contract_code', values='close_price')
-        contract_dates = target_data['date']
-
+        contract_data = target_data.pivot(index='date', columns='contract_code', values='close_price')
+        contract_dates = contract_data.index
         continuous_contract_price = pd.Series(np.ones(len(contract_dates)),
                                               index=contract_dates,
                                               name=contract)
+        # ylog.info(contract_dates)
         prev_date = contract_dates[0]
         # Loop through each contract and create the specific weightings for
         # each contract depending upon the rollover date and price adjusted method.
@@ -127,7 +134,7 @@ def create_continuous_contract(start_date, end_date, contract_data, target):
         price_adjust_ratio = pd.Series(np.ones(len(target_expiry_dates)),
                                        index=target_expiry_dates.values,
                                        name='ratio')
-        adjusted_price = pd.Series(index=contract_data.index,
+        adjusted_price = pd.Series(index=contract_dates,
                                    name=contract)
 
         for i, (item, ex_date) in enumerate(target_expiry_dates.iteritems()):
@@ -143,8 +150,13 @@ def create_continuous_contract(start_date, end_date, contract_data, target):
             pre_ex_date = contract_dates[idx_ex_date - 1]
             adjusted_price.ix[prev_date:pre_ex_date] = target_data_with_datetimeindex['close_price'].ix[prev_date:pre_ex_date] * price_adjust_ratio.ix[ex_date:].cumprod().iloc[-1]
             prev_date = ex_date
+        continuous_price = pd.concat([continuous_price, adjusted_price], axis=1)
+    return continuous_price
 
-    return 1
+
+ylog.set_level(logging.INFO)
+ylog.console_on()
+ylog.filelog_on('yahoo_fetcher')
 path = r'/home/weiwu/projects/simulate/data/future/'
 start_date = gftIO.zload(os.path.join(path, 'start_date.pkl'))
 end_date = gftIO.zload(os.path.join(path, 'end_date.pkl'))
