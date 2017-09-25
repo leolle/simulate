@@ -63,13 +63,13 @@ def create_future_rollover_position(start_date, end_date, contract_data, target)
         # Loop through each contract and create the specific position for
         # each contract depending upon the settlement date and rollover_days
         for i, (item, ex_date) in enumerate(contract_expiry_dates.iteritems()):
-            print(i, item, ex_date)
+            # print(i, item, ex_date)
             if i < len(contract_expiry_dates) - 1:
                 idx_pre_ex_date = contract_data.index.searchsorted(ex_date)
                 pre_ex_date = contract_dates[idx_pre_ex_date - 1]
-                contract_roll_position.ix[prev_date:pre_ex_date, item] = 1
+                contract_roll_position.loc[prev_date:pre_ex_date, item] = 1
             else:
-                contract_roll_position.ix[prev_date:, item] = 1
+                contract_roll_position.loc[prev_date:, item] = 1
             prev_date = ex_date
         roll_position = pd.concat([roll_position, contract_roll_position], axis=1)
     return roll_position.loc[start_date:end_date]
@@ -138,14 +138,16 @@ def create_continuous_contract(start_date, end_date, contract_data, target):
                                    name=contract)
 
         for i, (item, ex_date) in enumerate(target_expiry_dates.iteritems()):
-            print(i, item, ex_date)
+            ylog.info(i)
+            ylog.info(item)
+            ylog.info(ex_date)
             if i < len(target_expiry_dates) - 1:
                 idx_ex_date = target_data_with_datetimeindex.index.searchsorted(ex_date)
                 pre_ex_date = contract_dates[idx_ex_date - 1]
                 price_adjust_ratio.ix[ex_date] = target_data_with_datetimeindex['close_price'].ix[ex_date] / target_data_with_datetimeindex['close_price'].ix[pre_ex_date]
 
         for i, (item, ex_date) in enumerate(target_expiry_dates.iteritems()):
-            print(i, item, ex_date)
+            #print(i, item, ex_date)
             idx_ex_date = contract_data.index.searchsorted(ex_date)
             pre_ex_date = contract_dates[idx_ex_date - 1]
             adjusted_price.ix[prev_date:pre_ex_date] = target_data_with_datetimeindex['close_price'].ix[prev_date:pre_ex_date] * price_adjust_ratio.ix[ex_date:].cumprod().iloc[-1]
@@ -154,17 +156,81 @@ def create_continuous_contract(start_date, end_date, contract_data, target):
     return continuous_price
 
 
-ylog.set_level(logging.INFO)
+ylog.set_level(logging.DEBUG)
 ylog.console_on()
-ylog.filelog_on('yahoo_fetcher')
+ylog.filelog_on('parse_future_contract.')
 path = r'/home/weiwu/projects/simulate/data/future/'
 start_date = gftIO.zload(os.path.join(path, 'start_date.pkl'))
 end_date = gftIO.zload(os.path.join(path, 'end_date.pkl'))
-data = gftIO.zload(os.path.join(path, 'contract_data.pkl'))
+contract_data = gftIO.zload(os.path.join(path, 'contract_data.pkl'))
 target = gftIO.zload(os.path.join(path, 'target.pkl'))
 df_commission = gftIO.zload(os.path.join(path, 'df_commission_fee.pkl'))
 df_position = gftIO.zload(os.path.join(path, 'df_position.pkl'))
 df_price = gftIO.zload(os.path.join(path, 'df_price.pkl'))
 df_multiplier = gftIO.zload(os.path.join(path, 'df_multiplier.pkl'))
 
-a=create_continuous_contract(start_date, end_date, data, target)
+# create_continuous_contract(start_date, end_date, data, target)
+if isinstance(contract_data, gftIO.GftTable):
+    data = contract_data.asColumnTab().copy()
+
+if isinstance(target, list):
+    target = gftIO.strSet2Np(np.array(target))
+
+name = {'INNERCODE': 'contract_code', 'OPTIONCODE': 'contract_name',
+        'SETTLEMENTDATE': 'settlement_date', 'ENDDATE': 'date',
+        'CLOSEPRICE': 'close_price'}
+data.rename(columns=lambda x: name[x], inplace=True)
+continuous_price = pd.DataFrame()
+
+#if target is None:
+target = data['contract_name'].unique()[0]
+
+for contract in target:
+    ylog.info('contract name is %s', contract)
+    target_data = data[data['contract_name'] == contract]
+    target_expiry_dates = target_data[['contract_code', 'settlement_date']].\
+                            drop_duplicates().sort_values('settlement_date')
+    target_expiry_dates.set_index('contract_code', inplace=True)
+    target_expiry_dates = target_expiry_dates[target_expiry_dates.columns[0]]
+    target_data = target_data.loc[:, ['date', 'contract_code', 'close_price']]
+    contract_data = target_data.pivot(index='date', columns='contract_code', values='close_price')
+    contract_dates = contract_data.index
+    continuous_contract_price = pd.Series(np.ones(len(contract_dates)),
+                                          index=contract_dates,
+                                          name=contract)
+    # ylog.info(contract_dates)
+    prev_date = contract_dates[0]
+    # Loop through each contract and create the specific weightings for
+    # each contract depending upon the rollover date and price adjusted method.
+    # Here for backtesting, we use last trading day rollover and backward
+    # ratio price adjustment.
+    target_data_with_datetimeindex = target_data.set_index('date')
+    price_adjust_ratio = pd.Series(np.ones(len(target_expiry_dates)),
+                                   index=target_expiry_dates.values,
+                                   name='ratio')
+    adjusted_price = pd.Series(index=contract_dates,
+                               name=contract)
+
+    # to create price adjustment ratio.
+    for i, (item, ex_date) in enumerate(target_expiry_dates.iteritems()):
+        ylog.info(i)
+        # ylog.info(item)
+        ylog.info(ex_date)
+        # make sure index doesn't go beyond the datetimeindex.
+        if i < len(target_expiry_dates) - 1 and ex_date < target_data_with_datetimeindex.index[-1]:
+            idx_ex_date = target_data_with_datetimeindex.index.searchsorted(ex_date)
+            pre_ex_date = contract_dates[idx_ex_date - 1]
+            # ex_date has no price data, move ex_date to next trading date.
+            if ex_date not in target_data_with_datetimeindex.index:
+                ex_date = contract_dates[idx_ex_date + 1]
+            price_adjust_ratio.loc[ex_date] = target_data_with_datetimeindex['close_price'].loc[ex_date] / target_data_with_datetimeindex['close_price'].loc[pre_ex_date]
+
+    # to create adjusted price by the product of target price date and
+    # adjustment ratio.
+    for i, (item, ex_date) in enumerate(target_expiry_dates.iteritems()):
+        #print(i, item, ex_date)
+        idx_ex_date = contract_data.index.searchsorted(ex_date)
+        pre_ex_date = contract_dates[idx_ex_date - 1]
+        adjusted_price.loc[prev_date:pre_ex_date] = target_data_with_datetimeindex['close_price'].loc[prev_date:pre_ex_date] * price_adjust_ratio.loc[ex_date:].cumprod().iloc[-1]
+        prev_date = ex_date
+    continuous_price = pd.concat([continuous_price, adjusted_price], axis=1)
