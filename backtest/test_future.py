@@ -36,7 +36,8 @@ from future_position import create_future_rollover_position as rp
 
 logger = logging.getLogger()
 handler = logging.StreamHandler()
-formatter = logging.Formatter('%(asctime)s %(name)-12s %(levelname)-8s %(message)s')
+formatter = logging.Formatter(
+    '%(asctime)s %(name)-12s %(levelname)-8s %(message)s')
 handler.setFormatter(formatter)
 if not handler:
     logger.addHandler(handler)
@@ -66,6 +67,7 @@ contract in order to produce a continuous time series futures contract."""
 # date to the end date of the final contract
 # dates = pd.date_range(start_date, expiry_dates[-1], freq='B')
 # dates = wti_near.index.append(wti_far.index.append(wti_far_far.index)).unique()
+
 
 def futures_rollover_weights(start_date, dates, expiry_dates,
                              contracts, rollover_days=5):
@@ -97,7 +99,8 @@ def futures_rollover_weights(start_date, dates, expiry_dates,
             # and use these to adjust the weightings of each future
             decay_weights = np.linspace(0, 1, rollover_days + 1)
             roll_weights.ix[roll_rng, item] = 1 - decay_weights
-            roll_weights.ix[roll_rng, expiry_dates.index[i+1]] = decay_weights
+            roll_weights.ix[roll_rng,
+                            expiry_dates.index[i + 1]] = decay_weights
         else:
             roll_weights.ix[prev_date:, item] = 1
         prev_date = ex_date
@@ -147,11 +150,13 @@ for contract in target:
     contract_data = data[data['contract_name'] == contract]
     # contract_data.set_index('date', inplace=True)
     contract_expiry_dates = contract_data[['contract_code', 'settlement_date']].\
-                            drop_duplicates().sort_values('settlement_date')
+        drop_duplicates().sort_values('settlement_date')
     contract_expiry_dates.set_index('contract_code', inplace=True)
     contract_expiry_dates = contract_expiry_dates[contract_expiry_dates.columns[0]]
-    contract_data = contract_data.loc[:, ['date', 'contract_code', 'close_price']]
-    contract_data = contract_data.pivot(index='date', columns='contract_code', values='close_price')
+    contract_data = contract_data.loc[:, [
+        'date', 'contract_code', 'close_price']]
+    contract_data = contract_data.pivot(
+        index='date', columns='contract_code', values='close_price')
     contracts = contract_data.columns
     contract_start_date = contract_data.index[0]
     contract_dates = contract_data.index
@@ -185,12 +190,14 @@ df_position = df_position.loc[start_date:end_date]
 df_multiplier_name = {'CMVALUE': 'multiplier', 'CONTRACTINNERCODE': 'contract_code',
                       'CTIME': 'date', 'OPTIONCODE': 'contract_name'}
 df_multiplier.rename(columns=lambda x: df_multiplier_name[x], inplace=True)
-df_multiplier.drop_duplicates(subset=['contract_code', 'multiplier'], inplace=True)
+df_multiplier.drop_duplicates(
+    subset=['contract_code', 'multiplier'], inplace=True)
 df_multiplier.dropna(how='any', inplace=True)
 df_multiplier = df_multiplier.loc[:, ['contract_code', 'multiplier']]
 df_multiplier.set_index('contract_code', inplace=True)
 df_multiplier = df_multiplier[df_multiplier.columns[0]]
-df_multiplier = pd.DataFrame(data=df_multiplier[roll_position.columns], index=contract_dates, columns=roll_position.columns)
+df_multiplier = pd.DataFrame(
+    data=df_multiplier[roll_position.columns], index=contract_dates, columns=roll_position.columns)
 #df_multiplier = df_multiplier.pivot(index='date', columns='contract_code', values='multiplier')
 #df_multiplier.fillna(method='pad', inplace=True)
 #df_multiplier.fillna(method='bfill', inplace=True)
@@ -200,12 +207,14 @@ roll_weights = pd.DataFrame()
 
 target_data = data[data['contract_name'] == contract]
 target_expiry_dates = target_data[['contract_code', 'settlement_date']].\
-                        drop_duplicates().sort_values('settlement_date')
+    drop_duplicates().sort_values('settlement_date')
 target_expiry_dates.set_index('contract_code', inplace=True)
 target_expiry_dates = target_expiry_dates[target_expiry_dates.columns[0]]
 target_data = target_data.loc[:, ['date', 'contract_code', 'close_price']]
-target_data.groupby('contract_code')['close_price'].apply(lambda x: x.div(x.iloc[0]).subtract(1))
-contract_data = target_data.pivot(index='date', columns='contract_code', values='close_price')
+target_data.groupby('contract_code')['close_price'].apply(
+    lambda x: x.div(x.iloc[0]).subtract(1))
+contract_data = target_data.pivot(
+    index='date', columns='contract_code', values='close_price')
 contracts = contract_data.columns
 contract_start_date = contract_data.index[0]
 contract_dates = contract_data.index
@@ -232,13 +241,15 @@ for i, (item, ex_date) in enumerate(target_expiry_dates.iteritems()):
     if i < len(contract_expiry_dates) - 1:
         idx_ex_date = contract_data.index.searchsorted(ex_date)
         pre_ex_date = contract_dates[idx_ex_date - 1]
-        price_adjust_ratio.ix[ex_date] = target_data_with_datetimeindex['close_price'].ix[ex_date] / target_data_with_datetimeindex['close_price'].ix[pre_ex_date]
+        price_adjust_ratio.ix[ex_date] = target_data_with_datetimeindex['close_price'].ix[ex_date] / \
+            target_data_with_datetimeindex['close_price'].ix[pre_ex_date]
 
 for i, (item, ex_date) in enumerate(target_expiry_dates.iteritems()):
     print(i, item, ex_date)
     idx_ex_date = contract_data.index.searchsorted(ex_date)
     pre_ex_date = contract_dates[idx_ex_date - 1]
-    adjusted_price.ix[prev_date:pre_ex_date] = target_data_with_datetimeindex['close_price'].ix[prev_date:pre_ex_date] * price_adjust_ratio.ix[ex_date:].cumprod().iloc[-1]
+    adjusted_price.ix[prev_date:pre_ex_date] = target_data_with_datetimeindex['close_price'].ix[prev_date:pre_ex_date] * \
+        price_adjust_ratio.ix[ex_date:].cumprod().iloc[-1]
     prev_date = ex_date
 contract_data.plot(legend=True)
 adjusted_price.plot(legend=True, style='k--')
