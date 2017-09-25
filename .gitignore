@@ -10,3 +10,4 @@ __pycache__/
 optimization/cvxportfolio/
 optimization/painting/
 *.png
+*.log
