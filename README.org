@@ -74,6 +74,12 @@ gftIO.gidInt2Str(b'&90\r@r\xb1Y\x02\x00\x00\x7f\x00\x00\x00\xe1')
 ! ls /home/gft/work/lib/gftTools/
 ! echo $PYTHONPATH
 #+END_SRC
+* Graphic Strategist
+** 文档
+** 股票因子
+** 股票策略
+** 函数采样
+** 函数定义
 * optimization:
 ** logs:
 *** DONE position limit

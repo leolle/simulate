@@ -211,7 +211,7 @@ df_position = gftIO.zload(os.path.join(path, 'df_position.pkl'))
 df_price = gftIO.zload(os.path.join(path, 'df_price.pkl'))
 df_multiplier = gftIO.zload(os.path.join(path, 'df_multiplier.pkl'))
 
-create_continuous_contract(start_date, end_date, contract_data, target=None)
+# create_continuous_contract(start_date, end_date, contract_data, target=None)
 # if isinstance(contract_data, gftIO.GftTable):
 #     data = contract_data.asColumnTab().copy()
 
