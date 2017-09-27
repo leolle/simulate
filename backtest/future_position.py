@@ -42,6 +42,9 @@ def create_future_rollover_position(start_date, end_date, contract_data, target)
     if set(target).issubset(data['contract_name']):
         target_data = data.loc[data['contract_name'].isin(target)]
 
+    if target is None:
+        target = data['contract_name'].unique()
+
     roll_position = pd.DataFrame()
     for contract in target:
         contract_data = data[data['contract_name'] == contract]
@@ -211,6 +214,8 @@ df_position = gftIO.zload(os.path.join(path, 'df_position.pkl'))
 df_price = gftIO.zload(os.path.join(path, 'df_price.pkl'))
 df_multiplier = gftIO.zload(os.path.join(path, 'df_multiplier.pkl'))
 
+df_position = create_future_rollover_position(start_date, end_date, contract_data, target)
+print(df_position.head())
 # create_continuous_contract(start_date, end_date, contract_data, target=None)
 # if isinstance(contract_data, gftIO.GftTable):
 #     data = contract_data.asColumnTab().copy()
