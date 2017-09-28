@@ -30,69 +30,6 @@ def create_future_rollover_position(start_date, end_date, contract_data,
     if isinstance(contract_data, gftIO.GftTable):
         data = contract_data.asColumnTab().copy()
 
-    if isinstance(target, list):
-        target = gftIO.strSet2Np(np.array(target))
-
-    name = {
-        'INNERCODE': 'contract_code',
-        'OPTIONCODE': 'contract_name',
-        'SETTLEMENTDATE': 'settlement_date',
-        'ENDDATE': 'date',
-        'CLOSEPRICE': 'close_price'
-    }
-    data.rename(columns=lambda x: name[x], inplace=True)
-    # check if the target contracts are in the dataset.
-    if set(target).issubset(data['contract_name']):
-        target_data = data.loc[data['contract_name'].isin(target)]
-
-    if target is None:
-        target = data['contract_name'].unique()
-
-    roll_position = pd.DataFrame()
-    for contract in target:
-        contract_data = data[data['contract_name'] == contract]
-        # contract_data.set_index('date', inplace=True)
-        contract_expiry_dates = contract_data[['contract_code', 'settlement_date']].\
-            drop_duplicates().sort_values('settlement_date')
-        contract_expiry_dates.set_index('contract_code', inplace=True)
-        contract_expiry_dates = contract_expiry_dates[
-            contract_expiry_dates.columns[0]]
-        contract_data = contract_data.loc[:, [
-            'date', 'contract_code', 'close_price'
-        ]]
-        contract_data = contract_data.pivot(
-            index='date', columns='contract_code', values='close_price')
-        contracts = contract_data.columns
-        contract_start_date = contract_data.index[0]
-        contract_dates = contract_data.index
-
-        contract_roll_position = pd.DataFrame(
-            np.zeros((len(contract_dates), len(contracts))),
-            index=contract_dates,
-            columns=contracts)
-        prev_date = contract_roll_position.index[0]
-        # Loop through each contract and create the specific position for
-        # each contract depending upon the settlement date and rollover_days
-        for i, (item, ex_date) in enumerate(contract_expiry_dates.iteritems()):
-            # print(i, item, ex_date)
-            if i < len(contract_expiry_dates) - 1:
-                idx_pre_ex_date = contract_data.index.searchsorted(ex_date)
-                pre_ex_date = contract_dates[idx_pre_ex_date - 1]
-                contract_roll_position.loc[prev_date:pre_ex_date, item] = 1
-            else:
-                contract_roll_position.loc[prev_date:, item] = 1
-            prev_date = ex_date
-        roll_position = pd.concat(
-            [roll_position, contract_roll_position], axis=1)
-    return roll_position.loc[start_date:end_date]
-
-
-def create_future_long_short_position(contract_data,):
-    """ create long short position, rolling over at the day before expiry date.
-    """
-    if isinstance(contract_data, gftIO.GftTable):
-        data = contract_data.asColumnTab().copy()
-
     name = {
         'INNERCODE': 'contract_code',
         'OPTIONCODE': 'contract_name',
@@ -107,9 +44,7 @@ def create_future_long_short_position(contract_data,):
     roll_position = pd.DataFrame()
     # loop each commodity
     for num_contract, contract in enumerate(target):
-        if contract == b'\x1e\x16\x0b\x0c\xbep\xfaW\x02\x00\x00\x7f\x00\x00\x00\xe1':
-            continue
-        ylog.info('contract name is %s', contract)
+        # print('contract name is %s', contract)
         target_data = data[data['contract_name'] == contract]
         target_expiry_dates = target_data[['contract_code', 'settlement_date']].\
             drop_duplicates().sort_values('settlement_date')
@@ -129,13 +64,12 @@ def create_future_long_short_position(contract_data,):
         # ratio price adjustment.
         contract_roll_position = pd.DataFrame(
             np.zeros((len(contract_dates),
-                      len(data['contract_name'].unique()))),
+                      len(target_data['contract_code'].unique()))),
             index=contract_dates,
-            columns=data['contract_name'].unique())
+            columns=target_data['contract_code'].unique())
 
-        # row_iterator = target_expiry_dates.iteritems()
-        # _, last = row_iterator.next()  # take first item from row_iterator
         for i, (item, ex_date) in enumerate(target_expiry_dates.iteritems()):
+            # ylog.info(item)
             # print(i, item, ex_date)
             if i < len(target_expiry_dates) - 1:
                 idx_pre_ex_date = contract_data.index.searchsorted(ex_date)
@@ -155,7 +89,12 @@ def create_future_long_short_position(contract_data,):
         roll_position = pd.concat(
             [roll_position, contract_roll_position], axis=1)
 
-    return roll_position
+    return roll_position.loc[start_date:end_date]
+
+
+def create_future_long_short_position(contract_data,):
+    """ create long short position, rolling over at the day before expiry date.
+    """
 
 
 def create_continuous_contract(start_date, end_date, contract_data, target):
@@ -273,8 +212,8 @@ df_multiplier = gftIO.zload(os.path.join(path, 'df_multiplier.pkl'))
 
 # df_position = create_future_rollover_position(start_date, end_date,
 #                                               contract_data, target)
-# df_position = create_future_long_short_position(contract_data)
-# print(df_position.head())
+df_position = create_future_long_short_position(contract_data)
+print(df_position.head())
 
 # create_continuous_contract(start_date, end_date, contract_data, target=None)
 # if isinstance(contract_data, gftIO.GftTable):
@@ -361,62 +300,64 @@ df_multiplier = gftIO.zload(os.path.join(path, 'df_multiplier.pkl'))
 # ax = contract_data.plot(legend=True)
 # continuous_price.plot(legend=True, style='k--', ax=ax)
 # plt.show()
-if isinstance(contract_data, gftIO.GftTable):
-    data = contract_data.asColumnTab().copy()
 
-name = {
-    'INNERCODE': 'contract_code',
-    'OPTIONCODE': 'contract_name',
-    'SETTLEMENTDATE': 'settlement_date',
-    'ENDDATE': 'date',
-    'CLOSEPRICE': 'close_price'
-}
-data.rename(columns=lambda x: name[x], inplace=True)
-data.dropna(subset=['settlement_date'], inplace=True)
+# if isinstance(contract_data, gftIO.GftTable):
+#     data = contract_data.asColumnTab().copy()
 
-target = data['contract_name'].unique()
-roll_position = pd.DataFrame()
-contract = data['contract_name'].unique()[28]
-# loop each commodity
-# for num_contract, contract in enumerate(target):
-ylog.info('contract name is %s', contract)
-target_data = data[data['contract_name'] == contract]
-target_expiry_dates = target_data[['contract_code', 'settlement_date']].\
-    drop_duplicates().sort_values('settlement_date')
-target_expiry_dates.set_index('contract_code', inplace=True)
-target_expiry_dates = target_expiry_dates[target_expiry_dates.columns[0]]
-target_data = target_data.loc[:, ['date', 'contract_code', 'close_price']]
-contract_data = target_data.pivot(
-    index='date', columns='contract_code', values='close_price')
-contract_dates = contract_data.index
+# name = {
+#     'INNERCODE': 'contract_code',
+#     'OPTIONCODE': 'contract_name',
+#     'SETTLEMENTDATE': 'settlement_date',
+#     'ENDDATE': 'date',
+#     'CLOSEPRICE': 'close_price'
+# }
+# data.rename(columns=lambda x: name[x], inplace=True)
+# data.dropna(subset=['settlement_date'], inplace=True)
 
-prev_date = contract_dates[0]
-# Loop through each contract and create the specific weightings for
-# each contract depending upon the rollover date and price adjusted method.
-# Here for backtesting, we use last trading day rollover and backward
-# ratio price adjustment.
-contract_roll_position = pd.DataFrame(
-    np.zeros((len(contract_dates), len(data['contract_code'].unique()))),
-    index=contract_dates,
-    columns=data['contract_code'].unique())
+# target = data['contract_name'].unique()
+# roll_position = pd.DataFrame()
+# # test a commodity
+# contract = data['contract_name'].unique()[28]
+# # loop each commodity
+# # for num_contract, contract in enumerate(target):
+# ylog.info('contract name is %s', contract)
+# target_data = data[data['contract_name'] == contract]
+# target_expiry_dates = target_data[['contract_code', 'settlement_date']].\
+#     drop_duplicates().sort_values('settlement_date')
+# target_expiry_dates.set_index('contract_code', inplace=True)
+# target_expiry_dates = target_expiry_dates[target_expiry_dates.columns[0]]
+# target_data = target_data.loc[:, ['date', 'contract_code', 'close_price']]
+# contract_data = target_data.pivot(
+#     index='date', columns='contract_code', values='close_price')
+# contract_dates = contract_data.index
 
-# row_iterator = target_expiry_dates.iteritems()
-# _, last = row_iterator.next()  # take first item from row_iterator
-for i, (item, ex_date) in enumerate(target_expiry_dates.iteritems()):
-    # ylog.info(item)
-    # print(i, item, ex_date)
-    if i < len(target_expiry_dates) - 1:
-        idx_pre_ex_date = contract_data.index.searchsorted(ex_date)
-        pre_ex_date = contract_dates[idx_pre_ex_date - 1]
-        contract_roll_position.loc[prev_date:pre_ex_date, item] = 1
-        idx_ex_item = pd.Index(target_expiry_dates).get_loc(ex_date)
-        # ylog.info(idx_ex_item)
-        # ylog.info(ex_date)
-        if i < (len(target_expiry_dates) - 2):
-            far_item = target_expiry_dates.index[idx_ex_item + 1]
-            contract_roll_position.loc[prev_date:pre_ex_date, far_item] = -1
-        # ylog.info('far month %s', far_item)
-    else:
-        contract_roll_position.loc[prev_date:, item] = 1
-    prev_date = ex_date
-roll_position = pd.concat([roll_position, contract_roll_position], axis=1)
+# prev_date = contract_dates[0]
+# # Loop through each contract and create the specific weightings for
+# # each contract depending upon the rollover date and price adjusted method.
+# # Here for backtesting, we use last trading day rollover and backward
+# # ratio price adjustment.
+# contract_roll_position = pd.DataFrame(
+#     np.zeros((len(contract_dates), len(target_data['contract_code'].unique()))),
+#     index=contract_dates,
+#     columns=target_data['contract_code'].unique())
+
+# # row_iterator = target_expiry_dates.iteritems()
+# # _, last = row_iterator.next()  # take first item from row_iterator
+# for i, (item, ex_date) in enumerate(target_expiry_dates.iteritems()):
+#     ylog.info(item)
+#     # print(i, item, ex_date)
+#     if i < len(target_expiry_dates) - 1:
+#         idx_pre_ex_date = contract_data.index.searchsorted(ex_date)
+#         pre_ex_date = contract_dates[idx_pre_ex_date - 1]
+#         contract_roll_position.loc[prev_date:pre_ex_date, item] = 1
+#         idx_ex_item = pd.Index(target_expiry_dates).get_loc(ex_date)
+#         # ylog.info(idx_ex_item)
+#         # ylog.info(ex_date)
+#         if i < (len(target_expiry_dates) - 2):
+#             far_item = target_expiry_dates.index[idx_ex_item + 1]
+#             contract_roll_position.loc[prev_date:pre_ex_date, far_item] = -1
+#         # ylog.info('far month %s', far_item)
+#     else:
+#         contract_roll_position.loc[prev_date:, item] = 1
+#     prev_date = ex_date
+# roll_position = pd.concat([roll_position, contract_roll_position], axis=1)
