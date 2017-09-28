@@ -251,9 +251,9 @@ for i, (item, ex_date) in enumerate(target_expiry_dates.iteritems()):
     adjusted_price.ix[prev_date:pre_ex_date] = target_data_with_datetimeindex['close_price'].ix[prev_date:pre_ex_date] * \
         price_adjust_ratio.ix[ex_date:].cumprod().iloc[-1]
     prev_date = ex_date
-contract_data.plot(legend=True)
-adjusted_price.plot(legend=True, style='k--')
-plt.show()
+# contract_data.plot(legend=True)
+# adjusted_price.plot(legend=True, style='k--')
+# plt.show()
 
 # for i, (item, ex_date) in enumerate(target_expiry_dates.iteritems()):
 

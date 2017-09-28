@@ -75,7 +75,19 @@ gftIO.gidInt2Str(b'&90\r@r\xb1Y\x02\x00\x00\x7f\x00\x00\x00\xe1')
 ! echo $PYTHONPATH
 #+END_SRC
 * Graphic Strategist
+** FS 拓扑
+- Function Define, Function Define + Parameters -> Function Instance.
+把FD绑定参数之后生成FI.
+- Function Define -> Function Sampling.
+FS由FD搭建。
+- Function Sampling Define, Function Sampling Instance.
+也可以通过把FSD绑定参数，产生FSI。
+- Function Queue, Function Queue Instance.
+当FS跑出大量FSI之后，需要设置筛选条件来取出符合要求的FSI，这个时候需要设定FQ，同时通过FQI来取目标FSI。
+** 单因子流程
+
 ** 文档
+
 ** 股票因子
 ** 股票策略
 ** 函数采样
