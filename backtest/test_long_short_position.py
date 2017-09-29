@@ -65,7 +65,7 @@ df_price.rename(columns=lambda x: name[x], inplace=True)
 target = data['contract_name'].unique()
 roll_position = pd.DataFrame()
 # loop each commodity
-for num_contract, contract in enumerate(target):
+for num_contract, contract in enumerate(target[:2]):
     # print('contract name is %s', contract)
     target_data = data[data['contract_name'] == contract]
     target_expiry_dates = target_data[['contract_code', 'settlement_date']].\
@@ -110,7 +110,8 @@ for num_contract, contract in enumerate(target):
 # process price for simulation
 price = df_price.pivot(
     index='date', columns='contract_code', values='close_price')
-
+price.fillna(method='pad', inplace=True)
+price.fillna(method='bfill', inplace=True)
 # process multiplier
 df_multiplier_name = {
     'CONTRACTINNERCODE': 'contract_code',
@@ -128,3 +129,5 @@ ds_multiplier = df_multiplier.set_index('contract_code')['multiplier']
 df_portfolio_value = roll_position * price * ds_multiplier
 value = df_portfolio_value.sum(1)
 value = value.iloc[value.nonzero()]
+value.plot()
+plt.show()
