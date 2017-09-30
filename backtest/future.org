@@ -226,6 +226,29 @@ commissions charged per contract as well as exchange fees charged per trade.
 调仓频率，m-> 分钟；d-> 日；
 
 *** backtesting：
+**** common input:
+#+BEGIN_SRC python
+    Keyword Arguments:
+    initial_holding_position --
+    df_portfolio_weight      --
+    df_price                 --
+    df_multiplier            --
+    dfexecute_price          --
+    df_execute_price_return  --
+    df_trading_volume        --
+    df_commission            --
+    dict_trading_param       --
+
+    Return:
+    future_position          --
+    portfolio_value          --
+    cash                     --
+    single_period_return     --
+    weight                   --
+    cumulative_return        --
+    future_trades            --
+#+END_SRC
+
 **** initialize(futures_account)：
 
 该函数在在系统初始化后被调用一次；
