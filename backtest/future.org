@@ -228,26 +228,48 @@ commissions charged per contract as well as exchange fees charged per trade.
 *** backtesting：
 **** common input:
 #+BEGIN_SRC python
-    Keyword Arguments:
-    initial_holding_position --
-    df_portfolio_weight      --
-    df_price                 --
-    df_multiplier            --
-    dfexecute_price          --
-    df_execute_price_return  --
-    df_trading_volume        --
-    df_commission            --
-    dict_trading_param       --
+Keyword Arguments:
+initial_holding_position --
+df_portfolio_weight      --
+df_price                 --
+df_execute_price         -- 交易股票执行价格
+df_execute_price_return  -- 每个标的交易日的回报
+df_trading_volume        -- 每个标的交易日的交易量
+f_interest_rate
+execute_delay
 
-    Return:
-    future_position          --
-    portfolio_value          --
-    cash                     --
-    single_period_return     --
-    weight                   --
-    cumulative_return        --
-    future_trades            --
+Return:
+position                 --
+portfolio_value          --
+cash                     --
+single_period_return     --
+weight                   --
+cumulative_return        --
+trade_orders             --
 #+END_SRC
+**** specific input
+- stocks:
+df_total_return_factor   -- 复权因子计算
+
+lot_size
+
+can_trade_on_suspend
+
+- future:
+df_buy_commission            --
+
+df_sell_commission
+
+df_stop_loss
+
+df_multiplier            --
+
+df_borrowing_cost
+
+df_stop_trading_pct
+
+volume_limit_pct
+- option:
 
 **** initialize(futures_account)：
 
