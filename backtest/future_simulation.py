@@ -1,5 +1,7 @@
 # -*- coding: utf-8 -*-
 
+import pandas as pd
+
 
 def future_simulation(initial_holding_position, df_portfolio_weight, df_price,
                       df_multiplier, dfexecute_price, df_execute_price_return,
