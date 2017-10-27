@@ -4,12 +4,12 @@ import numpy as np
 from scipy import linalg
 
 
-def omega(P, sigma, tau):
+def omega(P, confidence, tau):
     """
     to calculate variance matrix of view.
     Keyword Arguments:
     P     --
-    sigma --
+    confidence --
     tau   --
     """
 
@@ -27,7 +27,7 @@ def calculate_adjusted_return(tau, lamda, weq, equilibrium_ret, historical_ret,
     2. Quantify their uncertainty in the prior by selecting a value for τ.
     If the covariance matrix has been generated from historical data, then τ = 1/n is a good place to start.
     3. Formulates their views, specifying P, Ω, and Q.
-    Given k views and n assets, then P is a k × n matrix where each row sums to 0 (relative view) or 1 (absolute view). Q is a k × 1 vector of the excess returns for each view. Ω is a diagonal k × k matrix of the variance of the estimated view mean about the unknown view mean. As a starting point, some authors call for the diagonal values of Ω to be set equal to pTτΣp (where p is the row from P for the specific view). This weights the views the same as the prior estimates.
+    Given k views and n assets, then P is a k × n matrix where each row sums to 0 (relative view) or 1 (absolute v    iew). Q is a k × 1 vector of the excess returns for each view. Ω is a diagonal k × k matrix of the variance of     the estimated view mean about the unknown view mean. As a starting point, some authors call for the diagonal     values of Ω to be set equal to pTτΣp (where p is the row from P for the specific view). This weights the views     the same as the prior estimates.
     4. Compute the posterior estimate of the returns using the following equation.
     $$\hat\Pi = \Pi + \tau\Sigma P'(P\tau\Sigma P')^{-1}(Q-P\Pi)$$
     5. Compute the posterior variance of the estimated mean about the unknown mean using the following equation.
@@ -63,8 +63,8 @@ def calculate_adjusted_return(tau, lamda, weq, equilibrium_ret, historical_ret,
     P: pd.DataFrame
         matrix of the assets involved in views (KxN matrix).
 
-    Q: pd.Series
-        view vector.
+    Q: pd.DataFrame
+        view matrix.
 
     omega: pd.DataFrame
         Matrix of variance of the views (diagonal).
