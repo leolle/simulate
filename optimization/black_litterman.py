@@ -8,9 +8,9 @@ def omega(P, confidence, tau):
     """
     to calculate variance matrix of view.
     Keyword Arguments:
-    P     --
+    P          --
     confidence --
-    tau   --
+    tau        --
     """
 
 
