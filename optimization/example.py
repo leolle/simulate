@@ -1,58 +1,153 @@
 # -*- coding: utf-8 -*-
-from math import sqrt
-from cvxopt import matrix
-from cvxopt.blas import dot 
-from cvxopt.solvers import qp, options 
+import pandas as pd
+import numpy as np
+from scipy import linalg
 
-n = 4
-S = matrix( [[ 4e-2,  6e-3, -4e-3,   0.0 ], 
-             [ 6e-3,  1e-2,  0.0,    0.0 ],
-             [-4e-3,  0.0,   2.5e-3, 0.0 ],
-             [ 0.0,   0.0,   0.0,    0.0 ]] )
-pbar = matrix([.12, .10, .07, .03])
 
-G = matrix(0.0, (n,n))
-G[::n+1] = -1.0
-h = matrix(0.0, (n,1))
-A = matrix(1.0, (1,n))
-b = matrix(1.0)
+def blacklitterman(delta, weq, sigma, tau, P, Q, Omega):
+    # blacklitterman
+    #   This function performs the Black-Litterman blending of the prior
+    #   and the views into a new posterior estimate of the returns as
+    #   described in the paper by He and Litterman.
+    # Inputs
+    #   delta  - Risk tolerance from the equilibrium portfolio
+    #   weq    - Weights of the assets in the equilibrium portfolio
+    #   sigma  - Prior covariance matrix
+    #   tau    - Coefficiet of uncertainty in the prior estimate of the mean (pi)
+    #   P      - Pick matrix for the view(s)
+    #   Q      - Vector of view returns
+    #   Omega  - Matrix of variance of the views (diagonal)
+    # Outputs
+    #   Er     - Posterior estimate of the mean returns
+    #   w      - Unconstrained weights computed given the Posterior estimates
+    #            of the mean and covariance of returns.
+    #   lambda - A measure of the impact of each view on the posterior estimates.
+    #
+    # Reverse optimize and back out the equilibrium returns
+    # This is formula (12) page 6.
+    pi = weq.dot(sigma * delta)
+    print(pi)
+    # We use tau * sigma many places so just compute it once
+    ts = tau * sigma
+    # Compute posterior estimate of the mean
+    # This is a simplified version of formula (8) on page 4.
+    middle = linalg.inv(np.dot(np.dot(P, ts), P.T) + Omega)
+    print(middle)
+    print(Q - np.expand_dims(np.dot(P, pi.T), axis=1))
+    er = np.expand_dims(
+        pi, axis=0).T + np.dot(
+            np.dot(np.dot(ts, P.T), middle),
+            (Q - np.expand_dims(np.dot(P, pi.T), axis=1)))
+    # Compute posterior estimate of the uncertainty in the mean
+    # This is a simplified and combined version of formulas (9) and (15)
+    posteriorSigma = sigma + ts - ts.dot(P.T).dot(middle).dot(P).dot(ts)
+    print(posteriorSigma)
+    # Compute posterior weights based on uncertainty in mean
+    w = er.T.dot(linalg.inv(delta * posteriorSigma)).T
+    # Compute lambda value
+    # We solve for lambda from formula (17) page 7, rather than formula (18)
+    # just because it is less to type, and we've already computed w*.
+    lmbda = np.dot(linalg.pinv(P).T, (w.T * (1 + tau) - weq).T)
+    return [er, w, lmbda]
 
-N = 100
-mus = [ 10**(5.0*t/N-1.0) for t in range(N) ]
-#options['show_progress'] = False
-xs = [ qp(mu*S, -pbar, G, h, A, b)['x'] for mu in mus ]
-returns = [ dot(pbar,x) for x in xs ]
-risks = [ sqrt(dot(x, S*x)) for x in xs ]
 
-try: import pylab
-except ImportError: pass
-else:
-    pylab.figure(1, facecolor='w')
-    pylab.plot(risks, returns)
-    pylab.xlabel('standard deviation')
-    pylab.ylabel('expected return')
-    pylab.axis([0, 0.2, 0, 0.15])
-    pylab.title('Risk-return trade-off curve (fig 4.12)')
-    pylab.yticks([0.00, 0.05, 0.10, 0.15])
+# Function to display the results of a black-litterman shrinkage
+# Inputs
+#   title	- Displayed at top of output
+#   assets	- List of assets
+#   res		- List of results structures from the bl function
+#
+def display(title, assets, res):
+    er = res[0]
+    w = res[1]
+    lmbda = res[2]
+    print('\n' + title)
+    line = 'Country\t\t'
+    for p in range(len(P)):
+        line = line + 'P' + str(p) + '\t'
+    line = line + 'mu\tw*'
+    print(line)
 
-    pylab.figure(2, facecolor='w')
-    c1 = [ x[0] for x in xs ] 
-    c2 = [ x[0] + x[1] for x in xs ]
-    c3 = [ x[0] + x[1] + x[2] for x in xs ] 
-    c4 = [ x[0] + x[1] + x[2] + x[3] for x in xs ]
-    pylab.fill(risks + [.20], c1 + [0.0], facecolor = '#F0F0F0') 
-    pylab.fill(risks[-1::-1] + risks, c2[-1::-1] + c1, 
-        facecolor = '#D0D0D0') 
-    pylab.fill(risks[-1::-1] + risks, c3[-1::-1] + c2, 
-        facecolor = '#F0F0F0') 
-    pylab.fill(risks[-1::-1] + risks, c4[-1::-1] + c3, 
-        facecolor = '#D0D0D0') 
-    pylab.axis([0.0, 0.2, 0.0, 1.0])
-    pylab.xlabel('standard deviation')
-    pylab.ylabel('allocation')
-    pylab.text(.15,.5,'x1')
-    pylab.text(.10,.7,'x2')
-    pylab.text(.05,.7,'x3')
-    pylab.text(.01,.7,'x4')
-    pylab.title('Optimal allocations (fig 4.12)')
-    #pylab.show()
+    i = 0
+    for x in assets:
+        line = '{0}\t'.format(x)
+        for j in range(len(P.T[i])):
+            line = line + '{0:.1f}\t'.format(100 * P.T[i][j])
+
+        line = line + '{0:.3f}\t{1:.3f}'.format(100 * er[i][0], 100 * w[i][0])
+        print(line)
+        i = i + 1
+
+    line = 'q\t\t'
+    i = 0
+    for q in Q:
+        line = line + '{0:.2f}\t'.format(100 * q[0])
+        i = i + 1
+    print(line)
+
+    line = 'omega/tau\t'
+    i = 0
+    for o in Omega:
+        line = line + '{0:.5f}\t'.format(o[i] / tau)
+        i = i + 1
+    print(line)
+
+    line = 'lambda\t\t'
+    i = 0
+    for l in lmbda:
+        line = line + '{0:.5f}\t'.format(l[0])
+        i = i + 1
+    print(line)
+
+
+# Take the values from He & Litterman, 1999.
+weq = np.array([0.016, 0.022, 0.052, 0.055, 0.116, 0.124, 0.615])
+C = np.array([[1.000, 0.488, 0.478, 0.515, 0.439, 0.512,
+               0.491], [0.488, 1.000, 0.664, 0.655, 0.310, 0.608, 0.779], [
+                   0.478, 0.664, 1.000, 0.861, 0.355, 0.783, 0.668
+               ], [0.515, 0.655, 0.861, 1.000, 0.354, 0.777,
+                   0.653], [0.439, 0.310, 0.355, 0.354, 1.000, 0.405, 0.306],
+              [0.512, 0.608, 0.783, 0.777, 0.405, 1.000,
+               0.652], [0.491, 0.779, 0.668, 0.653, 0.306, 0.652, 1.000]])
+Sigma = np.array([0.160, 0.203, 0.248, 0.271, 0.210, 0.200, 0.187])
+refPi = np.array([0.039, 0.069, 0.084, 0.090, 0.043, 0.068, 0.076])
+assets = {
+    'Australia', 'Canada   ', 'France   ', 'Germany  ', 'Japan    ',
+    'UK       ', 'USA      '
+}
+
+# Equilibrium covariance matrix
+V = np.multiply(np.outer(Sigma, Sigma), C)
+#print(V)
+
+# Risk aversion of the market
+delta = 2.5
+
+# Coefficient of uncertainty in the prior estimate of the mean
+# from footnote (8) on page 11
+tau = 0.05
+tauV = tau * V
+
+# Define view 1
+# Germany will outperform the other European markets by 5%
+# Market cap weight the P matrix
+# Results should match Table 4, Page 21
+P1 = np.array([0, 0, -.295, 1.00, 0, -.705, 0])
+Q1 = np.array([0.05])
+P = np.array([P1])
+Q = np.array([Q1])
+Omega = np.dot(np.dot(P, tauV), P.T) * np.eye(Q.shape[0])
+res = blacklitterman(delta, weq, V, tau, P, Q, Omega)
+display('View 1', assets, res)
+
+# Define view 2
+# Canadian Equities will outperform US equities by 3%
+# Market cap weight the P matrix
+# Results should match Table 5, Page 22
+P2 = np.array([0, 1.0, 0, 0, 0, 0, -1.0])
+Q2 = np.array([0.03])
+P = np.array([P1, P2])
+Q = np.array([Q1, Q2])
+Omega = np.dot(np.dot(P, tauV), P.T) * np.eye(Q.shape[0])
+res = blacklitterman(delta, weq, V, tau, P, Q, Omega)
+display('View 1 + 2', assets, res)
