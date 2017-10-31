@@ -105,3 +105,23 @@ historical_ret = gftIO.zload(
 Q = gftIO.zload("/home/weiwu/share/black_litterman/Q.pkl")
 tau = gftIO.zload("/home/weiwu/share/black_litterman/tau.pkl")
 weq = gftIO.zload("/home/weiwu/share/black_litterman/weq.pkl")
+if isinstance(historical_ret, gftIO.GftTable):
+    historical_ret = historical_ret.asMatrix().copy()
+    # In [139]: historical_ret.shape
+    # Out[140]: (451, 3437)
+
+if isinstance(P, gftIO.GftTable):
+    P = P.asMatrix().copy()
+    # In [131]: P.shape
+    # Out[138]: (490, 7018)
+
+if isinstance(weq, gftIO.GftTable):
+    weq = weq.asMatrix().copy()
+    # In [141]: weq.shape
+    # Out[143]: (451, 3551)
+
+logger.debug('parse data finished!')
+
+# select assets
+
+# calculate market capitalization weight for each asset
