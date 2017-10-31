@@ -1,0 +1,950 @@
+[33mcommit 82fdf0822d54d27195f5409064de2fe405250bb7[m[33m ([m[1;36mHEAD -> [m[1;32mmaster[m[33m, [m[1;31morigin/master[m[33m, [m[1;31morigin/HEAD[m[33m)[m
+Author: leolle <victor.wuv@gmail.com>
+Date:   Tue Oct 31 10:05:29 2017 +0800
+
+    find input data shape
+
+[33mcommit 042504a15b9e71b674c5a26127976cd58ad35acd[m
+Author: leolle <victor.wuv@gmail.com>
+Date:   Mon Oct 30 19:52:37 2017 +0800
+
+    load data
+
+[33mcommit 6517ddbcf3a1b20d06393b014180affe6effb5f0[m
+Author: leolle <victor.wuv@gmail.com>
+Date:   Fri Oct 27 19:27:32 2017 +0800
+
+    description
+
+[33mcommit 1b1a125d8b3e1939422e3a6df266b4a457452908[m
+Author: leolle <victor.wuv@gmail.com>
+Date:   Fri Oct 27 14:24:25 2017 +0800
+
+    add demo example
+
+[33mcommit b605c787fa9521e087fc77fd18fc306754b1788e[m
+Author: leolle <victor.wuv@gmail.com>
+Date:   Thu Oct 26 15:35:28 2017 +0800
+
+    function definition
+
+[33mcommit d6310c94104a79b5c29cc0dba7a180de0401dd9d[m
+Author: leolle <victor.wuv@gmail.com>
+Date:   Fri Oct 20 18:14:04 2017 +0800
+
+    create utils/ update gs
+
+[33mcommit 7a3176811ed93ca9ab478b170e6baabd999ecf66[m
+Author: leolle <victor.wuv@gmail.com>
+Date:   Mon Oct 9 14:12:26 2017 +0800
+
+    add description of fill holding function.
+
+[33mcommit 1550142b402d35ceb70b47570036963a2d9dca91[m
+Author: leolle <victor.wuv@gmail.com>
+Date:   Sat Sep 30 17:46:05 2017 +0800
+
+    future
+
+[33mcommit 05c04c0066834e89b2aa111f0ad28d4ec645d21a[m
+Author: leolle <victor.wuv@gmail.com>
+Date:   Sat Sep 30 15:28:45 2017 +0800
+
+    new future simulation file
+
+[33mcommit dab65ba29d6ad50ab370f5e625a1b236503edce5[m
+Author: leolle <victor.wuv@gmail.com>
+Date:   Sat Sep 30 09:34:15 2017 +0800
+
+    update
+
+[33mcommit b97902d68e809b8810f3c7b47dd97ab7593ff9f9[m
+Author: leolle <victor.wuv@gmail.com>
+Date:   Fri Sep 29 15:39:56 2017 +0800
+
+    check roll position
+
+[33mcommit 2f5718750359d688d4a2acb2e8637393839fe80e[m
+Author: leolle <victor.wuv@gmail.com>
+Date:   Fri Sep 29 11:57:51 2017 +0800
+
+    test long short
+
+[33mcommit 3d35981d13a642d3ef00cb76e93ee49742360554[m
+Author: leolle <victor.wuv@gmail.com>
+Date:   Thu Sep 28 19:23:22 2017 +0800
+
+    put code into a function
+
+[33mcommit bea84d1bc4c22ac9cdfeb4412e2289cd71e727ff[m
+Author: leolle <victor.wuv@gmail.com>
+Date:   Thu Sep 28 19:01:41 2017 +0800
+
+    long short issue: duplicated columns
+
+[33mcommit cee8642a36696f991a8be6bc08836f03d1500e5e[m
+Author: leolle <victor.wuv@gmail.com>
+Date:   Thu Sep 28 17:03:21 2017 +0800
+
+    future long short
+
+[33mcommit 1d9ef60b14d7019d64bcade47fff6c77f4301fae[m
+Author: leolle <victor.wuv@gmail.com>
+Date:   Wed Sep 27 16:59:27 2017 +0800
+
+    start long/short programming
+
+[33mcommit 1d17376154160bfcd0baf60371ead411fc82d4ee[m
+Author: leolle <victor.wuv@gmail.com>
+Date:   Wed Sep 27 09:23:59 2017 +0800
+
+    create long short position
+
+[33mcommit f188c2f89955bdd32eea813a260679c32b18c2cd[m
+Author: leolle <victor.wuv@gmail.com>
+Date:   Mon Sep 25 17:50:50 2017 +0800
+
+    dropna adjust index
+
+[33mcommit 6a2c9eacbedfea0a280d74515df5fe37d59c46cd[m
+Author: leolle <victor.wuv@gmail.com>
+Date:   Mon Sep 25 11:28:00 2017 +0800
+
+    check contract data one by one
+
+[33mcommit 6dbab5d1424ae0937283bbd00903899e61157c44[m
+Author: leolle <victor.wuv@gmail.com>
+Date:   Mon Sep 25 11:27:43 2017 +0800
+
+    check contract data one by one
+
+[33mcommit c0aaf7eb8b77bb4e51b6c1e28b22e4bff38bc035[m
+Author: leolle <victor.wuv@gmail.com>
+Date:   Sun Sep 24 23:32:27 2017 +0800
+
+    create continous contract
+
+[33mcommit 0b6e2753c837af3c2eed62e5ca71f1531f4f691f[m
+Author: leolle <victor.wuv@gmail.com>
+Date:   Sun Sep 24 23:20:02 2017 +0800
+
+    create continous contract
+
+[33mcommit 8b89fbe84abb6f98aee2e6bc5f4ed2e9454b46b8[m
+Author: leolle <victor.wuv@gmail.com>
+Date:   Fri Sep 22 15:24:55 2017 +0800
+
+    create future rollover position
+
+[33mcommit 16f61ab64b2bd3405186b6c4c72459a43c8d7923[m
+Author: leolle <victor.wuv@gmail.com>
+Date:   Thu Sep 21 18:40:34 2017 +0800
+
+    fetch rubber data
+
+[33mcommit d039ed7154cf89e640a9ee3dd558c047ac1fb7dd[m
+Author: leolle <victor.wuv@gmail.com>
+Date:   Thu Sep 21 16:52:08 2017 +0800
+
+    load contract data
+
+[33mcommit 7f543993885265ba7fe3e0f904540b8df81df052[m
+Author: leolle <victor.wuv@gmail.com>
+Date:   Thu Sep 21 16:26:36 2017 +0800
+
+    test roll weight using 3 crude oil future contracts.
+
+[33mcommit 3955a045f069a7515fbc2489ecb07114b1d61ab0[m
+Author: leolle <victor.wuv@gmail.com>
+Date:   Wed Sep 20 19:21:46 2017 +0800
+
+    simulated data
+
+[33mcommit f6f5b7ea774ac942175d4563e9c785ec69280905[m
+Author: leolle <victor.wuv@gmail.com>
+Date:   Wed Sep 20 17:46:13 2017 +0800
+
+    add test_future.py
+
+[33mcommit 39535f96ae1948ddf8a2108f27c9c57ec48d9205[m
+Author: leolle <victor.wuv@gmail.com>
+Date:   Wed Sep 20 17:25:58 2017 +0800
+
+    add fetching future contract
+
+[33mcommit 908dededdbfc14bd9f521069c2ed0eb08f241e84[m
+Author: leolle <victor.wuv@gmail.com>
+Date:   Mon Sep 18 19:06:37 2017 +0800
+
+    add const
+
+[33mcommit 2a016824dae334faf9ed6f947109e104e0ccd778[m
+Author: leolle <victor.wuv@gmail.com>
+Date:   Mon Sep 18 11:52:29 2017 +0800
+
+    update document
+
+[33mcommit b7d8fce7061993683ff4f56bd6031c9c85a50560[m
+Author: leolle <victor.wuv@gmail.com>
+Date:   Mon Sep 18 11:32:22 2017 +0800
+
+    update
+
+[33mcommit a9b4186c6ee83dc668759e8567a89721bd4e2e45[m
+Author: leolle <victor.wuv@gmail.com>
+Date:   Mon Sep 18 11:30:00 2017 +0800
+
+    add different methods to remove extreme value
+
+[33mcommit e578385df5d38fb24df0570dd4e73303866e288b[m
+Merge: 8c4b637 4cf46c3
+Author: leolle <victor.wuv@gmail.com>
+Date:   Mon Sep 18 11:24:56 2017 +0800
+
+    Merge branch 'master' of github.com:leolle/simulate
+
+[33mcommit 8c4b637efc652550f291c073064b8f807524db6c[m
+Author: leolle <victor.wuv@gmail.com>
+Date:   Mon Sep 18 11:22:45 2017 +0800
+
+    add excess cumulative returns and excess single returns.
+
+[33mcommit 990b8c047ab53a200667811412afd5980c1e457d[m
+Author: leolle <victor.wuv@gmail.com>
+Date:   Sun Sep 17 14:45:28 2017 +0800
+
+    future
+
+[33mcommit 4cf46c325c699ee52741ab72eff48f9eacaf72f6[m
+Author: leolle <victor.wuv@gmail.com>
+Date:   Sun Sep 17 11:15:20 2017 +0800
+
+    winorisze
+
+[33mcommit 1798ed4a2fbeb058045ba331b34128ff6fa937cb[m
+Author: leolle <victor.wuv@gmail.com>
+Date:   Fri Sep 15 15:11:52 2017 +0800
+
+    update
+
+[33mcommit c3385006744d9d36b02f75b53e697ee33ac274e7[m
+Author: leolle <victor.wuv@gmail.com>
+Date:   Thu Sep 14 19:16:37 2017 +0800
+
+    write pseudo code at the beginning
+
+[33mcommit 93c4eda932c559d8022557b59334fb80c15df4ec[m
+Author: leolle <victor.wuv@gmail.com>
+Date:   Thu Sep 14 16:47:39 2017 +0800
+
+    add future backtest py
+
+[33mcommit bd9e0bd7cbf1cdd8bcad2bbb1dfac8304c8c5609[m
+Author: leolle <victor.wuv@gmail.com>
+Date:   Thu Sep 14 15:15:58 2017 +0800
+
+    run forex seasonality
+
+[33mcommit bb5f3343188e78c1f11b600619ec6571f7fc8c57[m
+Author: leolle <victor.wuv@gmail.com>
+Date:   Thu Sep 14 10:36:43 2017 +0800
+
+    change remote from github user to leolle
+
+[33mcommit c1a8cd59bddcab7bdeda85d17a8e8cacd4f70737[m
+Author: leolle <victor.wuv@gmail.com>
+Date:   Tue Sep 12 19:22:04 2017 +0800
+
+    update
+
+[33mcommit 026c68b0a81ac5f72a350421e1d10d4fd5628e1e[m
+Author: leolle <victor.wuv@gmail.com>
+Date:   Tue Sep 12 13:32:15 2017 +0800
+
+    add future document
+
+[33mcommit ba6366059128c85065ce8944cfeacba7e020d3bf[m
+Author: leolle <victor.wuv@gmail.com>
+Date:   Tue Sep 12 10:28:24 2017 +0800
+
+    update
+
+[33mcommit 7062205b9876b423696037b84a1e0494b89f43a0[m
+Merge: 926f0a9 c603889
+Author: leolle <victor.wuv@gmail.com>
+Date:   Mon Sep 11 14:48:16 2017 +0800
+
+    remove log return mean as forecast return in the main function
+
+[33mcommit 926f0a99be9965f633a2139a2233354fdc77c213[m
+Author: leolle <victor.wuv@gmail.com>
+Date:   Mon Sep 11 14:45:12 2017 +0800
+
+    remove log return mean as forecast return in the main function
+
+[33mcommit 3c07fb204947b77e008e49e7cca202911438d030[m
+Author: leolle <victor.wuv@gmail.com>
+Date:   Mon Sep 11 09:29:09 2017 +0800
+
+     merge
+
+[33mcommit c603889d79ea80239818eb49087c6ed46ff5c81d[m
+Author: leolle <victor.wuv@gmail.com>
+Date:   Sun Sep 10 22:27:44 2017 +0800
+
+    update
+
+[33mcommit 919cbbefa680ed33b38998241538aafbfd34f3c4[m
+Author: leolle <victor.wuv@gmail.com>
+Date:   Fri Sep 8 23:19:49 2017 +0800
+
+    update
+
+[33mcommit 1ad8d18e102aa766642f2262198e596857f39a88[m
+Author: leolle <victor.wuv@gmail.com>
+Date:   Fri Sep 8 18:38:27 2017 +0800
+
+    copy input table
+
+[33mcommit a2ab969c384a1b26581e0bb31357637c0e80fde2[m
+Author: leolle <victor.wuv@gmail.com>
+Date:   Thu Sep 7 16:46:11 2017 +0800
+
+    fetch intersection symbols between delta and original portfolio
+
+[33mcommit da8928de2633b74b0c55ba3468ea8c64e7c66de4[m
+Author: leolle <victor.wuv@gmail.com>
+Date:   Thu Sep 7 15:44:23 2017 +0800
+
+    remove readme.md
+
+[33mcommit 239599fbd24cb2813112557f0152b9e3287c5dfb[m
+Author: leolle <victor.wuv@gmail.com>
+Date:   Thu Sep 7 11:41:46 2017 +0800
+
+    create factors filter
+
+[33mcommit 0dc98b6caf05647fc003041e6c46062107b533b9[m
+Author: leolle <victor.wuv@gmail.com>
+Date:   Wed Sep 6 17:49:31 2017 +0800
+
+    profile program
+
+[33mcommit e3fba916c11dbdd1e7d534ad68963e163ef55a1f[m
+Author: leolle <victor.wuv@gmail.com>
+Date:   Wed Sep 6 17:01:08 2017 +0800
+
+    profile stats
+
+[33mcommit 6284cc4ed08e9136eba2d8c9007e2a11a10897ea[m
+Author: leolle <victor.wuv@gmail.com>
+Date:   Wed Sep 6 15:59:03 2017 +0800
+
+    remove pivot dataframe, fetch all factors as X, load constraint by assets and group order
+
+[33mcommit bda9cdf2c6fc5d11069a8845b66d028cc29e0eee[m
+Author: leolle <victor.wuv@gmail.com>
+Date:   Tue Sep 5 23:36:48 2017 +0800
+
+    update
+
+[33mcommit b15915998d3a0b8a1090940231a89b670d84ba0b[m
+Author: leolle <victor.wuv@gmail.com>
+Date:   Tue Sep 5 23:36:12 2017 +0800
+
+    create seasonality strategy
+
+[33mcommit 256c7ec3d9c4df3122f2a9234828bcd205ec31f3[m
+Author: leolle <victor.wuv@gmail.com>
+Date:   Tue Sep 5 20:51:24 2017 +0800
+
+    transpose panel
+
+[33mcommit 8d0204a3900bbcf07586a15ef4caba7e003c87bd[m
+Author: leolle <victor.wuv@gmail.com>
+Date:   Tue Sep 5 16:11:52 2017 +0800
+
+    add solution status to the result
+
+[33mcommit 3bd94bf3ab80ec01f6f873a8aae96119fea3f9c7[m
+Author: leolle <victor.wuv@gmail.com>
+Date:   Fri Sep 1 18:34:55 2017 +0800
+
+    combine all the parts of convex optimization
+
+[33mcommit 3e72c5237a1ec15ab212112cb305f138bfb4b659[m
+Author: leolle <victor.wuv@gmail.com>
+Date:   Fri Sep 1 10:38:54 2017 +0800
+
+    extract risk model dictionary and compare big X
+
+[33mcommit 658420134a84242e3357aac355f8456596cde8d9[m
+Author: leolle <victor.wuv@gmail.com>
+Date:   Thu Aug 31 16:26:28 2017 +0800
+
+    extract dict risk model
+
+[33mcommit 1b0615dbc961043f40693d475656441a7d6d6bac[m
+Author: leolle <victor.wuv@gmail.com>
+Date:   Wed Aug 30 17:00:28 2017 +0800
+
+    extract dictionary input data as panel
+
+[33mcommit 764debc75d2f1f9718f93e5865209843a03d9415[m
+Author: leolle <victor.wuv@gmail.com>
+Date:   Tue Aug 29 19:26:14 2017 +0800
+
+    create asset exposure, sparse matrice
+
+[33mcommit 123d484fa74020eb09fe6457e823a5f22b193760[m
+Author: leolle <victor.wuv@gmail.com>
+Date:   Tue Aug 29 11:34:28 2017 +0800
+
+    add create diagonal matrice panel
+
+[33mcommit 790becbbb85a0fbe411e430a1c745aba28cb1d2b[m
+Author: leolle <victor.wuv@gmail.com>
+Date:   Sun Aug 27 17:00:00 2017 +0800
+
+    create asset exposure and boundaries setting
+
+[33mcommit 66c3adfacddc583dbf3aa7540892efac28d7515f[m
+Author: leolle <victor.wuv@gmail.com>
+Date:   Fri Aug 25 16:48:11 2017 +0800
+
+    test clustering algorithm
+
+[33mcommit 42ce5186531238ae06c8d4c0d1eeceae3b8f9c5c[m
+Author: leolle <victor.wuv@gmail.com>
+Date:   Tue Aug 22 11:04:49 2017 +0800
+
+    enumerate priority to test soft constraint
+
+[33mcommit 2c956ca8419b3659f826ddf2f4053c0cb0e1a11b[m
+Author: leolle <victor.wuv@gmail.com>
+Date:   Mon Aug 21 23:05:58 2017 +0800
+
+    test soft constraint
+
+[33mcommit 3a9138f4e2d5da8eaba46118c42f4d320b52385a[m
+Author: leolle <victor.wuv@gmail.com>
+Date:   Mon Aug 21 19:54:48 2017 +0800
+
+    tmp.py as the multi-period backup
+
+[33mcommit ed4db7c315d8dd6a8e786b82603880093c7ec517[m
+Author: leolle <victor.wuv@gmail.com>
+Date:   Mon Aug 21 17:46:12 2017 +0800
+
+    problem is not solvable
+
+[33mcommit 5e35691d1d6447f9b7575aebc141bad1925a6a69[m
+Author: leolle <victor.wuv@gmail.com>
+Date:   Mon Aug 21 15:35:41 2017 +0800
+
+    add equal constraint
+
+[33mcommit a8722c397fe17319bb930051beb6f99ece094b4b[m
+Author: leolle <victor.wuv@gmail.com>
+Date:   Mon Aug 21 13:57:08 2017 +0800
+
+    rewrite code for single period opts
+
+[33mcommit b34d0d5ad554d97724762782ed7b2e3740024011[m
+Author: leolle <victor.wuv@gmail.com>
+Date:   Fri Aug 18 19:24:06 2017 +0800
+
+    rewrite main code
+
+[33mcommit fa80a4e7f3dacbe480c91588e07494a58ab7a378[m
+Author: leolle <victor.wuv@gmail.com>
+Date:   Fri Aug 18 10:29:41 2017 +0800
+
+    create pseudo code flow
+
+[33mcommit 34190df3ab0a8dafd76ddf40054195e619870611[m
+Author: leolle <victor.wuv@gmail.com>
+Date:   Thu Aug 17 19:05:35 2017 +0800
+
+    change risk model to extract data
+
+[33mcommit c39b472434875b098153237038d5fad618d533b1[m
+Author: leolle <victor.wuv@gmail.com>
+Date:   Thu Aug 17 15:27:39 2017 +0800
+
+    cal culate factor exposure
+
+[33mcommit b3665429bff336cfbc6ae26185a7738907ed1457[m
+Author: leolle <victor.wuv@gmail.com>
+Date:   Thu Aug 17 14:14:21 2017 +0800
+
+    delta access by date and symbols
+
+[33mcommit 8aa278e9bcba2c224eba96fbfa53e7874baecadd[m
+Author: leolle <victor.wuv@gmail.com>
+Date:   Thu Aug 17 11:35:54 2017 +0800
+
+    test specific risk
+
+[33mcommit 6d7a681fce5f1e9c7761156b5b3e4dfd674b779d[m
+Author: leolle <victor.wuv@gmail.com>
+Date:   Thu Aug 17 11:24:37 2017 +0800
+
+    change factor return
+
+[33mcommit d3391178612c4b0944aae66f90251c08d377828a[m
+Author: leolle <victor.wuv@gmail.com>
+Date:   Wed Aug 16 16:10:16 2017 +0800
+
+    backup tmp3.py as the running version
+
+[33mcommit 00fb539e1ae1a9b95bc28a7d391479419f439559[m
+Author: leolle <victor.wuv@gmail.com>
+Date:   Wed Aug 16 16:07:42 2017 +0800
+
+    risk model class
+
+[33mcommit b5bab3387a81b4fd91331896bed5346b45df4b12[m
+Author: leolle <victor.wuv@gmail.com>
+Date:   Tue Aug 15 18:46:39 2017 +0800
+
+    detach risk model
+
+[33mcommit 163af3841931250a62b3a52cc30ced56d309c2a4[m
+Author: leolle <victor.wuv@gmail.com>
+Date:   Tue Aug 15 13:34:15 2017 +0800
+
+    create tmp3.py for multi-period backup
+
+[33mcommit 3ed7a5a2d76f1e0ee3e6709d45abb5899f260e2a[m
+Author: leolle <victor.wuv@gmail.com>
+Date:   Mon Aug 14 19:02:33 2017 +0800
+
+    create backup file for optimization of 58 stocks
+
+[33mcommit bc8b7e7efc84f3179e1c657dfb6ef27e884b6513[m
+Author: leolle <victor.wuv@gmail.com>
+Date:   Fri Aug 11 19:14:33 2017 +0800
+
+    add optimization gid
+
+[33mcommit 48554b5d172e21d0e6a3b4035bb63e07b151cde6[m
+Author: leolle <victor.wuv@gmail.com>
+Date:   Fri Aug 11 16:26:57 2017 +0800
+
+    add utility helper
+
+[33mcommit 1048e498569669b65928df39d8737854b07b7808[m
+Author: leolle <victor.wuv@gmail.com>
+Date:   Thu Aug 10 18:55:36 2017 +0800
+
+    update cvxportfolio cvxpy
+
+[33mcommit 02e9ab13799227a212236c3468a9358fbe4ddda2[m
+Author: leolle <victor.wuv@gmail.com>
+Date:   Wed Aug 9 13:58:46 2017 +0800
+
+    set constraint as a list
+
+[33mcommit 2e32ad0a4ca45590c31c673fa5ade3417c89edd8[m
+Author: leolle <victor.wuv@gmail.com>
+Date:   Fri Aug 4 10:54:49 2017 +0800
+
+    add cvxportfolio branch
+
+[33mcommit 0d78a73535156e041c37edbe2c27b8bee97c9943[m
+Author: leolle <victor.wuv@gmail.com>
+Date:   Fri Jul 28 17:13:54 2017 +0800
+
+    change opt
+
+[33mcommit 1e6ad20679ca413b896e31bfe2071f6c71e1494b[m
+Merge: 79b0e1e 9d5053b
+Author: leolle <victor.wuv@gmail.com>
+Date:   Thu Jul 27 15:20:00 2017 +0800
+
+    use cvxpy instead of cvxopt
+
+[33mcommit 79b0e1e0f050e6a73081d7bde4a914ea9d7364c3[m
+Author: leolle <victor.wuv@gmail.com>
+Date:   Thu Jul 27 15:15:42 2017 +0800
+
+    use cvxpy instead of cvxopt
+
+[33mcommit 2b987c5b1f2d2bc6c2be71c9942b0a55d5b669de[m
+Author: leolle <victor.wuv@gmail.com>
+Date:   Fri Jul 21 18:57:44 2017 +0800
+
+    update
+
+[33mcommit 231c09ec03989a9f4a4e55930d698416eace9fd3[m
+Author: leolle <victor.wuv@gmail.com>
+Date:   Tue Jul 18 15:56:45 2017 +0800
+
+    change tmp.py as a python debug file
+
+[33mcommit 9d5053ba8eaa8045c3b971477c9c1073302d8acb[m
+Author: leolle <victor.wuv@gmail.com>
+Date:   Thu Jul 13 10:01:01 2017 +0800
+
+    remove lib from directory
+
+[33mcommit 5f3e24b620cd9ccf5b94aa4951e9a031ec0b88a6[m
+Author: leolle <victor.wuv@gmail.com>
+Date:   Wed Jul 12 11:55:51 2017 +0800
+
+    risk model data frame
+
+[33mcommit d30fee97bb629b451223d75088c1aceaa7a86c94[m
+Author: leolle <victor.wuv@gmail.com>
+Date:   Sun Jul 9 18:47:59 2017 +0800
+
+    test hierachical index on factor exposure regression
+
+[33mcommit 54f3eb0d470c2efce2b8c69a7645f57f96d90d36[m
+Author: leolle <victor.wuv@gmail.com>
+Date:   Fri Jul 7 09:42:28 2017 +0800
+
+    modify readme
+
+[33mcommit 8dc8d738079c052fb770d3fa1c8cd31211113911[m
+Author: leolle <victor.wuv@gmail.com>
+Date:   Thu Jul 6 15:32:07 2017 +0800
+
+    modify readme
+
+[33mcommit 1fc88bf392c7871ad35eeb839c41025d8d3c21ad[m
+Author: leolle <victor.wuv@gmail.com>
+Date:   Tue Jul 4 11:17:25 2017 +0800
+
+    change readme
+
+[33mcommit be576a2f45638dc9a5ccf05b71b46b7b6fecda23[m
+Author: leolle <victor.wuv@gmail.com>
+Date:   Tue Jul 4 09:37:56 2017 +0800
+
+    change readme
+
+[33mcommit 1fd2b688329dda979a8a71a16fc7162f59ef71b3[m
+Author: leolle <victor.wuv@gmail.com>
+Date:   Mon Jul 3 19:05:46 2017 +0800
+
+    change readme
+
+[33mcommit 8bde85ce0cc295bdbee8b37a84bc24ba13b7f223[m
+Author: leolle <victor.wuv@gmail.com>
+Date:   Mon Jul 3 19:04:47 2017 +0800
+
+    change readme
+
+[33mcommit ffb4d72798d51c3b03a9567925fd2005a5924f4f[m
+Author: leolle <victor.wuv@gmail.com>
+Date:   Mon Jul 3 19:02:35 2017 +0800
+
+    change readme
+
+[33mcommit 436fceadb5a97809d53258d5028c6628c26d92fc[m
+Author: leolle <victor.wuv@gmail.com>
+Date:   Mon Jul 3 15:24:03 2017 +0800
+
+    modify readme
+
+[33mcommit 15adc8694f9f79684b725c43d3b5c21daff37250[m
+Author: leolle <victor.wuv@gmail.com>
+Date:   Mon Jul 3 15:21:10 2017 +0800
+
+    modify readme
+
+[33mcommit 5231a96d4462bc549c000c5a2bf52dbe1fca49aa[m
+Author: leolle <victor.wuv@gmail.com>
+Date:   Mon Jul 3 15:13:05 2017 +0800
+
+    modify readme
+
+[33mcommit 27003cdd8f656d9515d97bbe29e87e9bd918146c[m
+Author: leolle <victor.wuv@gmail.com>
+Date:   Mon Jul 3 10:09:16 2017 +0800
+
+    modify readme
+
+[33mcommit 254c5367f6e1c941b8df4109146ef17fcae08a9a[m
+Author: leolle <victor.wuv@gmail.com>
+Date:   Mon Jul 3 10:05:44 2017 +0800
+
+    modify readme
+
+[33mcommit 01e6f91b1f3484c1e2dc186beb5823ff7608db79[m
+Author: leolle <victor.wuv@gmail.com>
+Date:   Mon Jul 3 10:04:52 2017 +0800
+
+    modify readme
+
+[33mcommit 76ef6c6181d53b6574acb54ecf2498cf560af1af[m
+Author: leolle <victor.wuv@gmail.com>
+Date:   Mon Jul 3 09:56:05 2017 +0800
+
+    modify readme
+
+[33mcommit 5b24e570d8340de3585e25dc53f9c86a4ac6077b[m
+Author: leolle <victor.wuv@gmail.com>
+Date:   Mon Jul 3 09:30:57 2017 +0800
+
+    modify readme
+
+[33mcommit 20a784a57ad9a68cc82e63c3ec39e0ce2c9725d5[m
+Author: leolle <victor.wuv@gmail.com>
+Date:   Mon Jul 3 09:29:22 2017 +0800
+
+    modify readme
+
+[33mcommit 8ff9d7adbaf75d21a2005e6e5635d95eed23cbd6[m
+Author: leolle <victor.wuv@gmail.com>
+Date:   Mon Jul 3 09:26:46 2017 +0800
+
+    modify readme
+
+[33mcommit 9c6ed5908362947e2eaa6de419af84dd8e39dc6d[m
+Author: leolle <victor.wuv@gmail.com>
+Date:   Fri Jun 30 21:52:21 2017 +0800
+
+    try except on asMatrix()
+
+[33mcommit ec7b6086759aee845bff5de18e607531c4f2e6bb[m
+Author: leolle <victor.wuv@gmail.com>
+Date:   Fri Jun 30 17:59:48 2017 +0800
+
+    loss function paramater added
+
+[33mcommit aa2ce01744beae27767f9b6fa6d6858a9eea5186[m
+Author: leolle <victor.wuv@gmail.com>
+Date:   Fri Jun 30 09:10:01 2017 +0800
+
+    to fix group constraint return limit
+
+[33mcommit 334d4bbb42597b42e0866a238e50f0d9800ed7d6[m
+Author: leolle <victor.wuv@gmail.com>
+Date:   Thu Jun 29 15:03:48 2017 +0800
+
+    to check the issue of impossible constraint
+
+[33mcommit 68fe195a9b86fee94185eae9cec59f88e0af8e39[m
+Author: leolle <victor.wuv@gmail.com>
+Date:   Thu Jun 29 14:51:57 2017 +0800
+
+    check input constraint index
+
+[33mcommit 2b489b8a203c3942cb3f76556776cae2a842709a[m
+Author: leolle <victor.wuv@gmail.com>
+Date:   Thu Jun 29 13:57:12 2017 +0800
+
+    modify statistics function
+
+[33mcommit 8e2a856b864f99623008a646ef28d5b0ede19dde[m
+Author: leolle <victor.wuv@gmail.com>
+Date:   Thu Jun 29 10:49:45 2017 +0800
+
+    add logger
+
+[33mcommit e82999df2821b6bedd64393ff98d3722e93b05ce[m
+Author: leolle <victor.wuv@gmail.com>
+Date:   Thu Jun 29 09:51:58 2017 +0800
+
+    add logger
+
+[33mcommit 5c34c5622744635b9a1549d2a23f97113f5ccdac[m
+Author: leolle <victor.wuv@gmail.com>
+Date:   Wed Jun 28 14:34:35 2017 +0800
+
+    add checking failure reason to main function
+
+[33mcommit 014abe39ff8a00fddd7ffe0b5d647888c104a011[m
+Author: leolle <victor.wuv@gmail.com>
+Date:   Tue Jun 27 19:52:14 2017 +0800
+
+    change to largest sharpe ratio on target mode 2
+
+[33mcommit 8a7b6859d43e4c4a29c344bbce38f5db520e1b1b[m
+Author: leolle <victor.wuv@gmail.com>
+Date:   Tue Jun 27 17:17:38 2017 +0800
+
+    to construct max sharpe ratio portfolio
+
+[33mcommit 899ea284d964fb2add1f9d0400633b052842352f[m
+Author: leolle <victor.wuv@gmail.com>
+Date:   Tue Jun 27 17:16:14 2017 +0800
+
+    move return check into the main function
+
+[33mcommit d3e0ab8be76b07657aaf32c3f27df9d2f42d78f3[m
+Author: leolle <victor.wuv@gmail.com>
+Date:   Tue Jun 27 15:59:36 2017 +0800
+
+    check min max return from constraint
+
+[33mcommit 56eff8cf2c58b434d9688769d70dca5432d084ac[m
+Author: leolle <victor.wuv@gmail.com>
+Date:   Tue Jun 27 09:51:52 2017 +0800
+
+    remove monte carlo
+
+[33mcommit 680f2d982b5b535c880ad13b48551be0f9cd729b[m
+Author: leolle <victor.wuv@gmail.com>
+Date:   Tue Jun 27 09:51:30 2017 +0800
+
+    tangency portfolio, remove monte carlo simulation
+
+[33mcommit 52d30fae85360c36769e0b7177b9c7c0de09e9ef[m
+Author: leolle <victor.wuv@gmail.com>
+Date:   Mon Jun 26 19:13:29 2017 +0800
+
+    add default constraint check
+
+[33mcommit b2a914052b43773a6c9cb1cf6863054f97b7f94b[m
+Author: leolle <victor.wuv@gmail.com>
+Date:   Mon Jun 26 17:24:26 2017 +0800
+
+    check constraint
+
+[33mcommit 582936e576fb28d1931ca446b8668d9de1f70e3b[m
+Author: leolle <victor.wuv@gmail.com>
+Date:   Sun Jun 25 20:50:48 2017 +0800
+
+    add asset constraint on default because of rank
+
+[33mcommit 4c975ab9a02eb4ea58b9ec5b18aff97fb05c79b4[m
+Author: leolle <victor.wuv@gmail.com>
+Date:   Sun Jun 25 19:13:29 2017 +0800
+
+    try to find the best solution and show warning
+
+[33mcommit 236ddae8aa07dd4c9a9b5abacce6d8863fe7834e[m
+Author: leolle <victor.wuv@gmail.com>
+Date:   Sun Jun 25 15:23:09 2017 +0800
+
+    ready to remove state machine, to use try exception
+
+[33mcommit e1fb0825c61789818a2692de5a940207b630b643[m
+Author: leolle <victor.wuv@gmail.com>
+Date:   Fri Jun 23 19:12:50 2017 +0800
+
+    state machine for constraint test
+
+[33mcommit 040f5264a7a4b840a9da5cc5bbc67dcf0ead7e17[m
+Author: leolle <victor.wuv@gmail.com>
+Date:   Fri Jun 23 16:31:08 2017 +0800
+
+    test target return with factor exposure
+
+[33mcommit 32ccfabe9e730efc84bdcd18e070aa92265554b5[m
+Author: leolle <victor.wuv@gmail.com>
+Date:   Fri Jun 23 15:24:15 2017 +0800
+
+    add extra parameters
+
+[33mcommit deddfdbd38de701dca8799e0004485c3339d11ce[m
+Author: leolle <victor.wuv@gmail.com>
+Date:   Fri Jun 23 11:20:42 2017 +0800
+
+    change position limit constraint
+
+[33mcommit 72197714c17bdb3140d3704670970a1c267e01b8[m
+Author: leolle <victor.wuv@gmail.com>
+Date:   Fri Jun 23 09:54:20 2017 +0800
+
+    edit factor exposure regex
+
+[33mcommit c0a4a5e9e73419973d8375d29761a862a9c323cb[m
+Author: leolle <victor.wuv@gmail.com>
+Date:   Fri Jun 16 09:40:53 2017 +0800
+
+    add portfolio cvxopt file
+
+[33mcommit c97f82fd4774e63bc0630a78c9b168cb0b61d086[m
+Author: leolle <victor.wuv@gmail.com>
+Date:   Thu Jun 15 22:46:22 2017 +0800
+
+    test 3 scenarios
+
+[33mcommit 612ecb26db4e1e108f51745f5e44f2c207e04abb[m
+Author: leolle <victor.wuv@gmail.com>
+Date:   Thu Jun 15 21:28:47 2017 +0800
+
+    add minimum risk
+
+[33mcommit cf0813aa513675a2f3c1fc0d2517190cb4e5f9c6[m
+Author: leolle <victor.wuv@gmail.com>
+Date:   Thu Jun 15 21:23:23 2017 +0800
+
+    add maximum return
+
+[33mcommit 26568a8aa967d320ae69e00fcb0e4c953d182394[m
+Author: leolle <victor.wuv@gmail.com>
+Date:   Thu Jun 15 19:03:15 2017 +0800
+
+    to create cvxopt four objectives
+
+[33mcommit fb3e5a5d536fb401a25b50ca8e3e071e8e2628fc[m
+Author: leolle <victor.wuv@gmail.com>
+Date:   Tue Jun 13 19:00:48 2017 +0800
+
+    add main function
+
+[33mcommit dce60686fd4ba279277a450e573f4e7793c74d2f[m
+Author: leolle <victor.wuv@gmail.com>
+Date:   Fri Jun 9 19:16:23 2017 +0800
+
+    add optimize unit test
+
+[33mcommit 5b18395742614cf8ff7acf98040f8c5a5bd94cf8[m
+Author: leolle <victor.wuv@gmail.com>
+Date:   Fri Jun 9 19:15:05 2017 +0800
+
+    add optimize unit test
+
+[33mcommit 89b67a23ec1e49b7e9773023c6d7b5073f416f0c[m
+Author: leolle <victor.wuv@gmail.com>
+Date:   Fri Jun 9 19:14:26 2017 +0800
+
+    add optimize unit test
+
+[33mcommit 41351963cc6c072a0e3e2e2c3bee2847c175e30f[m
+Author: leolle <victor.wuv@gmail.com>
+Date:   Fri Jun 9 11:45:02 2017 +0800
+
+    ignore data files
+
+[33mcommit a44bc282cbe4bd8977d64d53805483af453e3106[m
+Author: leolle <victor.wuv@gmail.com>
+Date:   Fri Jun 9 11:43:48 2017 +0800
+
+    portfolio optimization
+
+[33mcommit 787f2c011cae31a8ae6a58d15c43a0e0eee5a35a[m
+Author: leolle <victor.wuv@gmail.com>
+Date:   Tue Jun 6 17:31:07 2017 +0800
+
+    add parse data
+
+[33mcommit 834ad01c757940ff4b2e8d8a60d56942f0a9f76d[m
+Author: leolle <victor.wuv@gmail.com>
+Date:   Tue Jun 6 09:35:16 2017 +0800
+
+    created different folders
+
+[33mcommit 02d9b710bebb9d092a0deae3f02e224d1e33b599[m
+Author: leolle <victor.wuv@gmail.com>
+Date:   Mon Jun 5 17:45:23 2017 +0800
+
+    add unittest
+
+[33mcommit f2561783c89545a902edfc5569fff89788ae4ddd[m
+Author: leolle <victor.wuv@gmail.com>
+Date:   Sun Jun 4 23:25:08 2017 +0800
+
+    files copied
+
+[33mcommit 3cb64556b0152d2fef1af7e337dc51cbffba158d[m
+Author: leolle <victor.wuv@gmail.com>
+Date:   Sun Jun 4 23:18:55 2017 +0800
+
+    first commit
