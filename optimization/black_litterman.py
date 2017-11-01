@@ -195,7 +195,8 @@ investor_position_view[investor_position_view.map(lambda x: x >= 0)] = 1
 investor_position_view[investor_position_view.map(lambda x: x < 0)] = -1
 investor_position_view = pd.DataFrame(
     np.diag(investor_position_view), columns=Q.index)
-Q = np.expand_dims(Q, axis=0)
+P = investor_position_view.values
+# Q = np.expand_dims(Q, axis=0)
 
 # logger.debug('investor position %s', investor_position_view)
 logger.debug('prediction Q %s', Q)
@@ -203,17 +204,16 @@ logger.debug('prediction Q %s', Q)
 tauV = tau * V
 Omega = np.dot(np.dot(investor_position_view, tauV),
                investor_position_view.T) * np.eye(Q.shape[0])
-P = investor_position_view.values
 
 ### calculation
-pi = Sigma.dot(weight) * delta
+pi = weight.values.dot(V) * delta
 logger.debug('equilibrium return %s', pi)
 # We use tau * sigma many places so just compute it once
-ts = tau * Sigma
+ts = tau * V
 # Compute posterior estimate of the mean
 # This is a simplified version of formula (8) on page 4.
 middle = linalg.inv(np.dot(np.dot(P, ts), P.T) + Omega)
-print(middle)
+logger.debug('Middle %s', middle)
 #print(Q - np.expand_dims(np.dot(P, pi.T), axis=1))
 er = np.expand_dims(
     pi, axis=0).T + np.dot(
