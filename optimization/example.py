@@ -151,3 +151,29 @@ Q = np.array([Q1, Q2])
 Omega = np.dot(np.dot(P, tauV), P.T) * np.eye(Q.shape[0])
 res = blacklitterman(delta, weq, V, tau, P, Q, Omega)
 display('View 1 + 2', assets, res)
+
+from copy import copy
+sigma = copy(V)
+pi = weq.dot(sigma * delta)
+print(pi)
+# We use tau * sigma many places so just compute it once
+ts = tau * sigma
+# Compute posterior estimate of the mean
+# This is a simplified version of formula (8) on page 4.
+middle = linalg.inv(np.dot(np.dot(P, ts), P.T) + Omega)
+print(middle)
+print(Q - np.expand_dims(np.dot(P, pi.T), axis=1))
+er = np.expand_dims(
+    pi, axis=0).T + np.dot(
+        np.dot(np.dot(ts, P.T), middle),
+        (Q - np.expand_dims(np.dot(P, pi.T), axis=1)))
+# Compute posterior estimate of the uncertainty in the mean
+# This is a simplified and combined version of formulas (9) and (15)
+posteriorSigma = sigma + ts - ts.dot(P.T).dot(middle).dot(P).dot(ts)
+print(posteriorSigma)
+# Compute posterior weights based on uncertainty in mean
+w = er.T.dot(linalg.inv(delta * posteriorSigma)).T
+# Compute lambda value
+# We solve for lambda from formula (17) page 7, rather than formula (18)
+# just because it is less to type, and we've already computed w*.
+lmbda = np.dot(linalg.pinv(P).T, (w.T * (1 + tau) - weq).T)
