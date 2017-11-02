@@ -10,6 +10,16 @@ import statsmodels.api as sm
 from lib.gftTools import gftIO
 import datetime
 from lib.gftTools import gftIO
+import logging
+
+logger = logging.getLogger()
+handler = logging.StreamHandler()
+formatter = logging.Formatter(
+    '%(asctime)s %(name)-12s %(levelname)-8s %(message)s')
+handler.setFormatter(formatter)
+if not logger.handlers:
+    logger.addHandler(handler)
+    logger.setLevel(logging.DEBUG)
 
 risk_model_path = '/home/weiwu/share/risk_model/'
 
@@ -22,14 +32,25 @@ corr_half_life = gftIO.zload(
 var_half_life = gftIO.zload(os.path.join(risk_model_path, 'var_half_life.pkl'))
 
 
-def risk_model(df_ret, dict_risk_expo, weight, corrhalflife, varhalflife):
-    '''
-    df_ret=x0
-    dict_risk_expo=x1
-    weight=x2
-    corrhalflife=x3
-    varhalflife=x4
-    '''
+def risk_model(df_ret, dict_factor_expo, capital, corr_half_life,
+               var_half_life):
+    """
+    Regression stock return by previous factor exposure, to get
+    factor return covariance and residual.
+
+    Pseudo code:
+    1. process input data, parse, drop and fill.
+    2. get all factor names
+
+    Keyword Arguments:
+    df_ret           -- pd.DataFrame, stock daily return.
+    dict_factor_expo -- dictionary, factor exposure, key=factor.
+    capital          -- pd.DataFrame, stock market capital, to calculate weight.
+    corr_half_life   -- int, to compare correlation half life.
+    var_half_life    -- int, to compare variance half life.
+    """
+
+    # get all factor names
     ls_fexponame = list(
         map(gftIO.gidInt2Str, list(dict_risk_expo['osets'].asColumnTab()[
             'O0'])))
@@ -331,3 +352,7 @@ def expoconstrain(dict_df_fexpo_raw, date, ind_factor_name, allfactor,
     return pd.concat(
         [dict_df_fexpo[date],
          df_wgt_con_fnl.assign(countryfactor=0)], axis=0)
+
+
+# model = risk_model(stock_return, factors, market_capital, corr_half_life,
+#                   var_half_life)
