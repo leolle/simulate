@@ -177,3 +177,7 @@ w = er.T.dot(linalg.inv(delta * posteriorSigma)).T
 # We solve for lambda from formula (17) page 7, rather than formula (18)
 # just because it is less to type, and we've already computed w*.
 lmbda = np.dot(linalg.pinv(P).T, (w.T * (1 + tau) - weq).T)
+rets = pd.DataFrame(, columns=['mean'])
+rets['er'] = pi
+rets['eer'] = er
+rets['prediction'] = Q

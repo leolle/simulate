@@ -9,31 +9,10 @@ import math as mt
 import statsmodels.api as sm
 from lib.gftTools import gftIO
 import datetime
-from lib.gftTools import gftIO
 import logging
 
-logger = logging.getLogger()
-handler = logging.StreamHandler()
-formatter = logging.Formatter(
-    '%(asctime)s %(name)-12s %(levelname)-8s %(message)s')
-handler.setFormatter(formatter)
-if not logger.handlers:
-    logger.addHandler(handler)
-    logger.setLevel(logging.DEBUG)
 
-risk_model_path = '/home/weiwu/share/risk_model/'
-
-stock_return = gftIO.zload(os.path.join(risk_model_path, 'stock_return.pkl'))
-factors = gftIO.zload(os.path.join(risk_model_path, 'factors.pkl'))
-market_capital = gftIO.zload(
-    os.path.join(risk_model_path, 'market_capital.pkl'))
-corr_half_life = gftIO.zload(
-    os.path.join(risk_model_path, 'corr_half_life.pkl'))
-var_half_life = gftIO.zload(os.path.join(risk_model_path, 'var_half_life.pkl'))
-
-
-def risk_model(df_ret, dict_factor_expo, capital, corr_half_life,
-               var_half_life):
+def risk_model(df_ret, dict_risk_expo, capital, corr_half_life, var_half_life):
     """
     Regression stock return by previous factor exposure, to get
     factor return covariance and residual.
@@ -41,20 +20,29 @@ def risk_model(df_ret, dict_factor_expo, capital, corr_half_life,
     Pseudo code:
     1. process input data, parse, drop and fill.
     2. get all factor names
+    calculate factor return.
+    calculate factor return covariance.
+    calculate the residual(specific) variances of regression.
+    generate final return value.
 
     Keyword Arguments:
     df_ret           -- pd.DataFrame, stock daily return.
-    dict_factor_expo -- dictionary, factor exposure, key=factor.
+    dict_risk_expo   -- dictionary, factor exposure, key=factor.
     capital          -- pd.DataFrame, stock market capital, to calculate weight.
     corr_half_life   -- int, to compare correlation half life.
     var_half_life    -- int, to compare variance half life.
+
+    Return:
+    27 industrial factors + 8 style factors return -- pd.DataFrame
+    ret_cov                                        -- pd.DataFrame, return covariance
+    specificRisk                                   -- pd.DataFrame, residual
     """
 
     # get all factor names
+    logger.debug('parse data')
     ls_fexponame = list(
         map(gftIO.gidInt2Str, list(dict_risk_expo['osets'].asColumnTab()[
             'O0'])))
-
     ind_factor_name = sorted(
         list(
             map(gftIO.gidInt2Str,
@@ -68,7 +56,7 @@ def risk_model(df_ret, dict_factor_expo, capital, corr_half_life,
     ##stock return preprocess
     df_w_ret = df_ret.asMatrix().T.dropna(how='all', axis=1)
 
-    ##factor exposure preprocess
+    ##get factor exposure date list(all snapshots)
     dict_risk_expo_new = {
         factorname: dict_risk_expo[factorname].asMatrix().dropna(how='all')
         for factorname in allfactor
@@ -79,6 +67,7 @@ def risk_model(df_ret, dict_factor_expo, capital, corr_half_life,
     ])
     ls_alldates_fexpo = reduce(np.intersect1d, ls_ls_fexpodate)
 
+    ## get factor exposure symbol list
     ls_ls_fexposymbol = list([
         dict_risk_expo_new[factorname].columns.tolist()
         for factorname in dict_risk_expo_new.keys()
@@ -86,9 +75,9 @@ def risk_model(df_ret, dict_factor_expo, capital, corr_half_life,
     ls_allsymbols_fexpo = reduce(np.intersect1d, ls_ls_fexposymbol)
 
     ##weight preprocess
-    weight = weight.asMatrix().T
+    weight = capital.asMatrix().T
 
-    ##get the date/symbol intersection of (stock return,factor exposure,weight)
+    ##get the date/symbol intersection of (stock return,factor exposure,capital)
 
     ##ls_alldates save the stock return map date
 
@@ -116,31 +105,32 @@ def risk_model(df_ret, dict_factor_expo, capital, corr_half_life,
 
     ls_alldates = sorted(
         list(
-            set(weight.columns).intersection(set(df_w_ret.columns))
+            set(capital.columns).intersection(set(df_w_ret.columns))
             .intersection(set(dict_date_map.values()))))
     ls_alldates_ondaybefore = sorted(list(dict_date_map.keys()))
+    ##get daily symbol list
     ls_allsymbols = {
         date: list(
             set(df_w_ret[[dict_date_map[date]]].dropna().index).intersection(
-                set(ls_allsymbols_fexpo)).intersection(set(weight.index)))
+                set(ls_allsymbols_fexpo)).intersection(set(capital.index)))
         for date in ls_alldates_ondaybefore
     }
 
-    ##align the stock return and factor exposure
-    dict_df_weight_raw = {
-        date: weight[[date]].reindex(index=ls_allsymbols[date]).fillna(0)
+    ## align the stock return and factor exposure
+    dict_df_capital_raw = {
+        date: capital[[date]].reindex(index=ls_allsymbols[date]).fillna(0)
         for date in ls_alldates_ondaybefore
     }
-    dict_df_weight = {
-        date: np.sqrt(dict_df_weight_raw[date])
+    dict_df_capital = {
+        date: np.sqrt(dict_df_capital_raw[date])
         for date in ls_alldates_ondaybefore
     }
 
     dict_df_ret = {
         dict_date_map[date]: pd.concat(
             [(df_w_ret[[dict_date_map[date]]].reindex(
-                index=ls_allsymbols[date])) *
-             (dict_df_weight[date].rename(columns={date: dict_date_map[date]})),
+                index=ls_allsymbols[date])) * (dict_df_capital[date].rename(
+                    columns={date: dict_date_map[date]})),
              pd.DataFrame(
                  data=np.zeros(1),
                  index=['constrain'],
@@ -154,26 +144,27 @@ def risk_model(df_ret, dict_factor_expo, capital, corr_half_life,
     }
     dict_df_fexpo = {
         date: dict_df_fexpo_raw[date].assign(countryfactor=1).multiply(
-            dict_df_weight[date].squeeze(), axis='index')
+            dict_df_capital[date].squeeze(), axis='index')
         for date in ls_alldates_ondaybefore
     }
 
     ##calculate constraints
     dict_df_fexpo_con = {
         date: expoconstrain(dict_df_fexpo_raw, date, ind_factor_name, allfactor,
-                            dict_df_weight_raw, sty_factor_name, dict_df_fexpo)
+                            dict_df_capital_raw, sty_factor_name, dict_df_fexpo)
         for date in ls_alldates_ondaybefore
     }
 
-    #for i in dict_risk_expo_new.keys():
-    #if dict_risk_expo_new[i].index.min() > df_l_ret.index.min() or dict_risk_expo_new[i].index.max() < df_l_ret.index.max():
-    #raise Exception
+    # for i in dict_risk_expo_new.keys():
+    #     if dict_risk_expo_new[i].index.min() > df_l_ret.index.min(
+    #     ) or dict_risk_expo_new[i].index.max() < df_l_ret.index.max():
+    #         raise Exception
 
     ########################step3:calculate factor return########################
 
     ls_df_fitresult = {
         dict_date_map[date]:
-        Regression(date, dict_df_ret, dict_df_fexpo_con, dict_df_weight,
+        Regression(date, dict_df_ret, dict_df_fexpo_con, dict_df_capital,
                    dict_df_fexpo, dict_date_map)
         for date in ls_alldates_ondaybefore
     }
@@ -189,8 +180,8 @@ def risk_model(df_ret, dict_factor_expo, capital, corr_half_life,
     df_allfactorret = df_model_params.T
     df_allfactorret = df_allfactorret.sort_index()
 
-    corrhalflife = int(corrhalflife)
-    varhalflife = int(varhalflife)
+    corrhalflife = int(corr_half_life)
+    varhalflife = int(var_half_life)
 
     halflife = max(corrhalflife, varhalflife)
 
@@ -246,7 +237,7 @@ def risk_model(df_ret, dict_factor_expo, capital, corr_half_life,
         return dictMerged
 
 
-def Regression(date, dict_df_ret, dict_df_fexpo_con, dict_df_weight,
+def Regression(date, dict_df_ret, dict_df_fexpo_con, dict_df_capital,
                dict_df_fexpo, dict_date_map):
     dateadd = dict_date_map[date]
 
@@ -263,7 +254,7 @@ def Regression(date, dict_df_ret, dict_df_fexpo_con, dict_df_weight,
     df_model_resid.index = dict_df_fexpo_con[date].index
     df_model_resid = df_model_resid.reindex(dict_df_fexpo[date].index)
     df_model_resid = df_model_resid.multiply(
-        1 / dict_df_weight[date].squeeze(), axis='index')
+        1 / dict_df_capital[date].squeeze(), axis='index')
 
     return {'params': df_model_params, 'resid': df_model_resid}
 
@@ -337,10 +328,10 @@ def fexpomerge(dict_risk_expo_new, date, allfactor, ls_allsymbols):
 
 
 def expoconstrain(dict_df_fexpo_raw, date, ind_factor_name, allfactor,
-                  dict_df_weight_raw, sty_factor_name, dict_df_fexpo):
+                  dict_df_capital_raw, sty_factor_name, dict_df_fexpo):
     df_fexpo_date = dict_df_fexpo_raw[date].reindex(
         columns=ind_factor_name).multiply(
-            dict_df_weight_raw[date].squeeze(), axis='index')
+            dict_df_capital_raw[date].squeeze(), axis='index')
     df_wgt_con = pd.DataFrame(df_fexpo_date.sum(axis=0)).T.rename(
         index={0: 'constrain'})
 
@@ -354,5 +345,64 @@ def expoconstrain(dict_df_fexpo_raw, date, ind_factor_name, allfactor,
          df_wgt_con_fnl.assign(countryfactor=0)], axis=0)
 
 
+logger = logging.getLogger()
+handler = logging.StreamHandler()
+formatter = logging.Formatter(
+    '%(asctime)s %(name)-12s %(levelname)-8s %(message)s')
+handler.setFormatter(formatter)
+if not logger.handlers:
+    logger.addHandler(handler)
+    logger.setLevel(logging.DEBUG)
+
+    risk_model_path = '/home/weiwu/share/risk_model/'
+
+    # keep from double loading
+    stock_return = gftIO.zload(
+        os.path.join(risk_model_path, 'stock_return.pkl'))
+    factors = gftIO.zload(os.path.join(risk_model_path, 'factors.pkl'))
+    market_capital = gftIO.zload(
+        os.path.join(risk_model_path, 'market_capital.pkl'))
+    corr_half_life = gftIO.zload(
+        os.path.join(risk_model_path, 'corr_half_life.pkl'))
+    var_half_life = gftIO.zload(
+        os.path.join(risk_model_path, 'var_half_life.pkl'))
+
 # model = risk_model(stock_return, factors, market_capital, corr_half_life,
 #                   var_half_life)
+logger.debug('parse data')
+
+# get all factor names
+ls_fexponame = factors['osets'].asColumnTab()['O0'].apply(
+    gftIO.gidInt2Str).tolist()
+ind_factor_name = factors[ls_fexponame[0]].asColumnTab()['O0'].apply(
+    gftIO.gidInt2Str).tolist()
+style_factor_name = factors[ls_fexponame[1]].asColumnTab()['O0'].apply(
+    gftIO.gidInt2Str).tolist()
+
+allfactor = ind_factor_name + style_factor_name
+
+##stock return preprocess
+if isinstance(stock_return, gftIO.GftTable):
+    # df_w_ret = stock_return.asMatrix().T.dropna(how='all', axis=1)
+    df_w_ret = stock_return.asMatrix().dropna(axis=1, how='all')
+##get factor exposure date list(all snapshots)
+logger.debug('pack factors to dictionary')
+dict_risk_expo_new = {
+    factorname: factors[factorname].asMatrix().dropna(how='all')
+    for factorname in allfactor
+}
+
+ls_all_factors = [
+    factors[fac].asMatrix().dropna(how='all') for fac in allfactor
+]
+ls_all_stocks = reduce(pd.Index.union,
+                       [factors[fac].asMatrix().columns for fac in allfactor])
+# ls_all_stocks = [factors[fac].asMatrix().columns for fac in allfactor]
+ls_all_dates = reduce(pd.Index.union,
+                      [factors[fac].asMatrix().index for fac in allfactor])
+for num, fac in enumerate(ls_all_factors):
+    ls_all_factors[num] = fac.reindex(index=ls_all_dates, columns=ls_all_stocks)
+
+pd_panel_factor = pd.Panel(
+    {allfactor[key]: factor
+     for key, factor in enumerate(ls_all_factors)})

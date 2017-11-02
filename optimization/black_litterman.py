@@ -29,6 +29,7 @@ def black_litterman_optimization(delta, weq, P, Q, tau, Sigma):
     via reverse optimize and back out the equilibrium returns,
     which combines current market equilibrium expected returns
     with investors views described in the paper by He and Litterman.
+
     Pseudo code
     -----------
     1. Π = δΣw
@@ -204,8 +205,7 @@ investor_position_view[investor_position_view < df_equilibrium] = -1
 investor_position_view = pd.DataFrame(
     np.diag(investor_position_view), columns=Q.index)
 P = investor_position_view.values
-Q = np.expand_dims(Q, axis=1)
-
+Q
 # logger.debug('investor position %s', investor_position_view)
 logger.debug('prediction Q %s', Q)
 # Coefficient of uncertainty in the prior estimate of the mean
