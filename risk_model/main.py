@@ -385,6 +385,10 @@ allfactor = ind_factor_name + style_factor_name
 if isinstance(stock_return, gftIO.GftTable):
     # df_w_ret = stock_return.asMatrix().T.dropna(how='all', axis=1)
     df_w_ret = stock_return.asMatrix().dropna(axis=1, how='all')
+##stock market capital preprocess
+if isinstance(market_capital, gftIO.GftTable):
+    # df_w_ret = stock_return.asMatrix().T.dropna(how='all', axis=1)
+    market_capital = market_capital.asMatrix().dropna(axis=1, how='all').copy()
 ##get factor exposure date list(all snapshots)
 logger.debug('pack factors to dictionary')
 dict_risk_expo_new = {
@@ -392,17 +396,23 @@ dict_risk_expo_new = {
     for factorname in allfactor
 }
 
+# parse all factors to a list
 ls_all_factors = [
     factors[fac].asMatrix().dropna(how='all') for fac in allfactor
 ]
-ls_all_stocks = reduce(pd.Index.union,
+
+# get list of all intersected stock symbols
+ls_all_stocks = reduce(pd.Index.intersection,
                        [factors[fac].asMatrix().columns for fac in allfactor])
 # ls_all_stocks = [factors[fac].asMatrix().columns for fac in allfactor]
-ls_all_dates = reduce(pd.Index.union,
+# get list of all intersected dates
+ls_all_dates = reduce(pd.Index.intersection,
                       [factors[fac].asMatrix().index for fac in allfactor])
+# reset index of each factor dataframe
 for num, fac in enumerate(ls_all_factors):
     ls_all_factors[num] = fac.reindex(index=ls_all_dates, columns=ls_all_stocks)
 
+# create 3d panel
 pd_panel_factor = pd.Panel(
     {allfactor[key]: factor
-     for key, factor in enumerate(ls_all_factors)})
+     for key, factor in enumerate(ls_all_factors)}).transpose(1, 2, 0)
