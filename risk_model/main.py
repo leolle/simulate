@@ -350,6 +350,7 @@ def expoconstrain(dict_df_fexpo_raw, date, ind_factor_name, allfactor,
          df_wgt_con_fnl.assign(countryfactor=0)], axis=0)
 
 
+"""----------------------------------------------------------------------"""
 logger = logging.getLogger()
 handler = logging.StreamHandler()
 formatter = logging.Formatter(
@@ -389,23 +390,33 @@ allfactor = ind_factor_name + style_factor_name
 ##stock return preprocess
 if isinstance(stock_return, gftIO.GftTable):
     # df_w_ret = stock_return.asMatrix().T.dropna(how='all', axis=1)
-    df_w_ret = stock_return.asMatrix().dropna(axis=1, how='all')
+    df_stock_return = stock_return.asMatrix().dropna(axis=1, how='all')
 ##stock market capital preprocess
 if isinstance(market_capital, gftIO.GftTable):
     # df_w_ret = stock_return.asMatrix().T.dropna(how='all', axis=1)
     market_capital = market_capital.asMatrix().dropna(axis=1, how='all').copy()
-##get factor exposure date list(all snapshots)
-logger.debug('pack factors to dictionary')
-dict_risk_expo_new = {
-    factorname: factors[factorname].asMatrix().dropna(how='all')
-    for factorname in allfactor
-}
+    market_capital.fillna(method='ffill', inplace=True)
+# get factor exposure date list(all snapshots)
+# logger.debug('pack factors to dictionary')
+# dict_risk_expo_new = {
+#     factorname: factors[factorname].asMatrix().dropna(how='all')
+#     for factorname in allfactor
+# }
 
 # parse all factors to a list
-ls_all_factors = [
-    factors[fac].asMatrix().dropna(how='all') for fac in allfactor
+df_sqrt_cap = market_capital.apply(np.sqrt)
+ls_pd_ind_factors = [
+    factors[fac].asMatrix().dropna(how='all') * df_sqrt_cap
+    for fac in ind_factor_name
 ]
-
+ls_pd_style_factors = [
+    factors[fac].asMatrix().dropna(how='all') for fac in style_factor_name
+]
+for num, fac in enumerate(ls_pd_ind_factors):
+    ls_pd_ind_factors[num]['constraint'] = ls_pd_ind_factors[num].sum(axis=0)
+for num, fac in enumerate(ls_pd_style_factors):
+    ls_pd_style_factors[num]['constraint'] = 0
+ls_pd_all_factors = ls_pd_style_factors + ls_pd_style_factors
 # get list of all intersected stock symbols
 ls_all_stocks = reduce(pd.Index.intersection,
                        [factors[fac].asMatrix().columns for fac in allfactor])
@@ -413,13 +424,25 @@ ls_all_stocks = reduce(pd.Index.intersection,
 # get list of all intersected dates
 ls_all_dates = reduce(pd.Index.intersection,
                       [factors[fac].asMatrix().index for fac in allfactor])
+# create country factor
+df_country_factor = pd.DataFrame(0.0, index=ls_all_dates, columns=ls_all_stocks)
+ls_pd_all_factors.append(df_country_factor)
 # reset index of each factor dataframe
-for num, fac in enumerate(ls_all_factors):
-    ls_all_factors[num] = fac.reindex(index=ls_all_dates, columns=ls_all_stocks)
-
+for num, fac in enumerate(ls_pd_all_factors):
+    ls_pd_all_factors[num] = fac.reindex(
+        index=ls_all_dates, columns=ls_all_stocks)
+allfactor.append('country')
 # create 3d panel
+logger.debug('convert all factors&stocks to pandas panel')
 pd_panel_factor = pd.Panel(
     {allfactor[key]: factor
-     for key, factor in enumerate(ls_all_factors)}).transpose(1, 2, 0)
+     for key, factor in enumerate(ls_pd_all_factors)}).transpose(1, 2, 0)
 
-df_sr_market_capital = market_capital.apply(np.sqrt)
+# Solve the problem of heteroskedasticity by square root the market capitalization.
+df_sqrt_return = market_capital.apply(np.sqrt) * df_stock_return
+df_sqrt_cap_return = df_sqrt_return.reindex(
+    index=ls_all_dates, columns=ls_all_stocks)
+# df_sqrt_cap_return['constraint'] = 0
+
+# add constraint to all factors
+logger.debug('add constraint to all factors')
