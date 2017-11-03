@@ -417,21 +417,26 @@ for num, fac in enumerate(ls_pd_ind_factors):
 for num, fac in enumerate(ls_pd_style_factors):
     ls_pd_style_factors[num]['constraint'] = 0
 ls_pd_all_factors = ls_pd_style_factors + ls_pd_style_factors
+
 # get list of all intersected stock symbols
 ls_all_stocks = reduce(pd.Index.intersection,
                        [factors[fac].asMatrix().columns for fac in allfactor])
 # ls_all_stocks = [factors[fac].asMatrix().columns for fac in allfactor]
+
 # get list of all intersected dates
 ls_all_dates = reduce(pd.Index.intersection,
                       [factors[fac].asMatrix().index for fac in allfactor])
+
 # create country factor
 df_country_factor = pd.DataFrame(0.0, index=ls_all_dates, columns=ls_all_stocks)
 ls_pd_all_factors.append(df_country_factor)
+
 # reset index of each factor dataframe
 for num, fac in enumerate(ls_pd_all_factors):
     ls_pd_all_factors[num] = fac.reindex(
         index=ls_all_dates, columns=ls_all_stocks)
 allfactor.append('country')
+
 # create 3d panel
 logger.debug('convert all factors&stocks to pandas panel')
 pd_panel_factor = pd.Panel(
