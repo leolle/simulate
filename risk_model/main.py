@@ -19,7 +19,12 @@ def risk_model(df_ret, dict_risk_expo, capital, corr_half_life, var_half_life):
 
     Pseudo code:
     1. process input data, parse, drop and fill.
-    2. get all factor names
+    2. get intersection of all factor names, all symbol names, all dates.
+    3. Solve the problem of heteroskedasticity by square root the market capitalization.
+    Handbook p5, p15.
+    new return = square root of market capitalization * stock return,
+    add a constraint column to new return.
+
     calculate factor return.
     calculate factor return covariance.
     calculate the residual(specific) variances of regression.
@@ -416,3 +421,5 @@ for num, fac in enumerate(ls_all_factors):
 pd_panel_factor = pd.Panel(
     {allfactor[key]: factor
      for key, factor in enumerate(ls_all_factors)}).transpose(1, 2, 0)
+
+df_sr_market_capital = market_capital.apply(np.sqrt)
