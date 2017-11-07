@@ -205,7 +205,7 @@ investor_position_view[investor_position_view < df_equilibrium] = -1
 investor_position_view = pd.DataFrame(
     np.diag(investor_position_view), columns=Q.index)
 P = investor_position_view.values
-Q
+# Q
 # logger.debug('investor position %s', investor_position_view)
 logger.debug('prediction Q %s', Q)
 # Coefficient of uncertainty in the prior estimate of the mean
