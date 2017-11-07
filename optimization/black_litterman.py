@@ -23,7 +23,7 @@ def omega(P, confidence, tau):
 
 # def black_litterman_optimization(delta, weq, historical_ret, P, Q, C, tau,
 #                                  Sigma):
-def black_litterman_optimization(delta, weq, P, Q, tau, Sigma):
+def black_litterman_optimization(delta, weq, P, Q, tau, Sigma, C):
     '''
     Calculate new vector of expected return using the Black-Litterman model
     via reverse optimize and back out the equilibrium returns,

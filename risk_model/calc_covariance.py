@@ -2,7 +2,6 @@
 import pandas as pd
 import numpy as np
 import xarray as xr
-import re
 import os
 import warnings
 from functools import reduce
@@ -365,5 +364,5 @@ if not logger.handlers:
 
     # keep from double loading
 logger.debug('load xarray data')
-xa_exposure = gftIO.zload(
+xr_exposure = gftIO.zload(
     os.path.join(risk_model_path, 'riskModelConstrain.zpkl'))
