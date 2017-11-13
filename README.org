@@ -18,6 +18,7 @@
 #+BEGIN_SRC shell
 !cp /home/gft/data/x0.pkl ~/work/
 
+gftIO.zdump(data, '/home/gft/data/file_name.zpkl')
 #+END_SRC
 
 ** transfer:

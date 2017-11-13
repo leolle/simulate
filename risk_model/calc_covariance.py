@@ -350,7 +350,9 @@ def expoconstrain(dict_df_fexpo_raw, date, ind_factor_name, allfactor,
          df_wgt_con_fnl.assign(countryfactor=0)], axis=0)
 
 
-"""----------------------------------------------------------------------"""
+""" Regression with xarray
+----------------------------------------------------------------------
+"""
 logger = logging.getLogger()
 handler = logging.StreamHandler()
 formatter = logging.Formatter(
@@ -364,5 +366,4 @@ if not logger.handlers:
 
     # keep from double loading
 logger.debug('load xarray data')
-xr_exposure = gftIO.zload(
-    os.path.join(risk_model_path, 'riskModelConstrain.zpkl'))
+xr_exposure = gftIO.zload(os.path.join(risk_model_path, 'risk_model.zpkl'))
