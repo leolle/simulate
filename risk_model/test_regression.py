@@ -63,3 +63,15 @@ resid = xr.DataArray(np.random.randn(432, 2981))
 resid.coords['dim_0'] = time
 
 model = {'param': param, 'resid': resid}
+
+# coefs = stacked.groupby('allpoints').apply(xr_regression)
+
+
+def xr_regression(y):
+    date = y.date
+    model = sm.RLM(y.values, X.loc[date].values, M=sm.robust.norms.HuberT())
+    results = model.fit()
+    return xr.DataArray(results.params)
+
+
+result = Y.groupby('date').apply(xr_regression)
