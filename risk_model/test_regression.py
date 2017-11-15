@@ -11,12 +11,21 @@ from lib.gftTools import gftIO
 import datetime
 import logging
 
+logger = logging.getLogger()
+handler = logging.StreamHandler()
+formatter = logging.Formatter(
+    '%(asctime)s %(name)-12s %(levelname)-8s %(message)s')
+handler.setFormatter(formatter)
+if not logger.handlers:
+    logger.addHandler(handler)
+    logger.setLevel(logging.DEBUG)
+
 time = pd.date_range('2000-01-01', freq='D', periods=432)
 X = xr.DataArray(
     np.random.randn(432, 10, 3), [('date', time), ('stock', list('abcdefghij')),
                                   ('factor', list('xyz'))])
 
-Y = xr.DataArray(
+y = xr.DataArray(
     np.random.randn(432, 10), [('date', time), ('stock', list('abcdefghij'))])
 
 
@@ -59,19 +68,107 @@ param = xr.DataArray(
         'B1B02CFAB81248BAA87754E760769BD2', 'E8A54A95C9264162BEEC88B9CF65C78B'
     ])])
 
-resid = xr.DataArray(np.random.randn(432, 2981))
-resid.coords['dim_0'] = time
+# resid = xr.DataArray(np.random.randn(432, 2981))
+# resid.coords['dim_0'] = time
 
-model = {'param': param, 'resid': resid}
+# model = {'param': param, 'resid': resid}
 
 # coefs = stacked.groupby('allpoints').apply(xr_regression)
 
 
-def xr_regression(y):
+def xr_regression_coef(y):
     date = y.date
     model = sm.RLM(y.values, X.loc[date].values, M=sm.robust.norms.HuberT())
     results = model.fit()
     return xr.DataArray(results.params)
 
 
-result = Y.groupby('date').apply(xr_regression)
+def xr_regression(y):
+    date = y.date
+    model = sm.RLM(y.values, X.loc[date].values, M=sm.robust.norms.HuberT())
+    results = model.fit()
+    return xr.DataArray(results.resid)
+
+
+def xr_regression_resid(y):
+    date = y.date
+    model = sm.RLM(y.values, X.loc[date].values, M=sm.robust.norms.HuberT())
+    results = model.fit()
+    return xr.DataArray(results.resid)
+
+
+# result = Y.groupby('date').apply(xr_regression)
+# result_coef = Y.groupby('date').apply(xr_regression_coef)
+#result_resid = Y.groupby('date').apply(xr_regression_resid)
+
+# create regression result dateframe
+params = pd.DataFrame(index=X.date, columns=X.factor)
+residuals = pd.DataFrame(index=X.date, columns=X.stock)
+# get the datetimeindex
+idx_date = y.get_index('date')
+for dt in y.date.values:
+    cur_date = pd.Timestamp(dt)
+    #print(cur_date)
+    # get the position of current date
+    dt_pos = idx_date.get_loc(cur_date)
+    if dt_pos == 0:
+        continue
+    dt_pre_pos = dt_pos - 1
+    model = sm.RLM(
+        y[dt_pos].values, X[dt_pre_pos].values, M=sm.robust.norms.HuberT())
+    results = model.fit()
+    params.loc[cur_date] = results.params
+    residuals.loc[cur_date] = results.resid
+"""
+------------------------------------------------------------------------------
+"""
+# create regression result dateframe
+params = pd.DataFrame(index=X.date, columns=X.factor)
+residuals = pd.DataFrame(index=X.date, columns=X.symbol)
+
+# get the datetimeindex
+idx_date = y.get_index('date')
+idx_symbol = X.get_index('symbol')
+
+for dt in y.date.values:
+    logger.debug('regression on %s', dt)
+    cur_date = pd.Timestamp(dt)
+    # get the position of current date
+    dt_pos = idx_date.get_loc(cur_date)
+    if dt_pos == 0:
+        continue
+    dt_pre_pos = dt_pos - 1
+    # symbols having valid value(not nan)
+    s = X[:, dt_pre_pos].notnull().all(axis=0)
+    valid_x = X[:, dt_pre_pos, s].symbol.values
+
+    w = y.loc[cur_date].notnull()
+    valid_y = y.loc[cur_date, w].symbol.values
+
+    valid_symbol = np.intersect1d(valid_x, valid_y)
+    try:
+        model = sm.RLM(
+            y.loc[cur_date, valid_symbol].values,
+            X.isel(
+                date=dt_pre_pos,
+                symbol=idx_symbol.get_indexer(valid_symbol)).values.T,
+            M=sm.robust.norms.HuberT())
+        results = model.fit()
+    except ValueError:
+        continue
+    params.loc[cur_date] = results.params
+    residuals.loc[cur_date, valid_symbol] = results.resid
+
+
+class RLMModel:
+
+    def __init__(self, arg):
+        self.arg = arg
+
+    def fit(self, X, y):
+        model = sm.RLM(y, X, M=sm.robust.norms.HuberT())
+        return model.fit()
+
+
+a = RLMModel(0)
+gftIO.zdump(a, 'test.zpkl')
