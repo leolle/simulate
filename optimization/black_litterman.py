@@ -140,7 +140,7 @@ if not logger.handlers:
     delta = gftIO.zload("/home/weiwu/share/black_litterman/delta.pkl")
     historical_ret = gftIO.zload(
         "/home/weiwu/share/black_litterman/historical_ret.pkl")
-    # Q = gftIO.zload("/home/weiwu/share/black_litterman/Q.pkl")
+    Q = gftIO.zload("/home/weiwu/share/black_litterman/Q.pkl")
     tau = gftIO.zload("/home/weiwu/share/black_litterman/tau.pkl")
     weq = gftIO.zload("/home/weiwu/share/black_litterman/weq.pkl")
 if isinstance(historical_ret, gftIO.GftTable):
@@ -163,7 +163,7 @@ if isinstance(weq, gftIO.GftTable):
     # In [141]: weq.shape
     # Out[143]: (451, 3551)
 
-ROE_parsed = winsorize_mad(ROE_forecast)
+# ROE_parsed = winsorize_mad(ROE_forecast)
 logger.debug('parse data finished!')
 
 target_symbols = historical_ret.columns.intersection(
@@ -190,13 +190,13 @@ logger.debug('select symbols %s', target_symbols)
 # Equilibrium covariance matrix
 C = .8  # confidence level, simply use a real number
 delta = 3.5
-la_period = 30
+la_period = 90
 logger.info('confidence level %s', C)
 logger.info('tau %s', tau)
 logger.info('delta %s', delta)
 
 # calculate market capitalization weight for each asset
-dt_target = target_dates[-1]
+dt_target = target_dates[-100]
 dt_1Y_pre = dt_target - pd.DateOffset(years=1)
 dt_1Q_pre = dt_target - pd.DateOffset(days=90)
 logger.debug('1 year datetime range %s:%s', dt_1Y_pre, dt_target)
@@ -205,9 +205,18 @@ logger.debug('market capital %s', market_capital)
 weight = market_capital / market_capital.sum()
 
 # use mean as equilibrium return of the stocks
-df_equilibrium = historical_ret.loc[dt_1Y_pre:dt_target, target_symbols].mean()
+if len(historical_ret) < 1:
+    logging.ERROR('not enough historical data')
 
-Sigma = historical_ret.loc[dt_1Y_pre:dt_target, target_symbols].fillna(
+if np.any(np.isnan(historical_ret)):
+    df_single_return = historical_ret.copy()
+    df_single_return[np.isnan(df_single_return)] = 0.
+df_cum = (df_single_return + 1).cumprod(axis=0) - 1
+df_interval_agg_ret = df_cum - df_cum.shift(la_period)
+df_ret_forecast = df_interval_agg_ret.shift(-la_period)
+df_equilibrium = df_ret_forecast.loc[dt_1Q_pre:dt_target, target_symbols].mean()
+
+Sigma = historical_ret.loc[dt_1Q_pre:dt_target, target_symbols].fillna(
     0).cov().values
 V = Sigma * C
 
@@ -262,11 +271,3 @@ logger.debug('Middle %s', middle)
 # # prediction from investors views
 # rets['prediction'] = Q
 # rets.to_csv('returns.csv')
-if len(historical_ret) < 1:
-    logging.ERROR('not enough historical data')
-
-if np.any(np.isnan(historical_ret)):
-    df_single_return = historical_ret.copy()
-    df_single_return[np.isnan(df_single_return)] = 0.
-df_cum = (df_single_return + 1).cumprod(axis=0) - 1
-df_interval_agg_ret = df_cum - df_cum.shift(la_period)
