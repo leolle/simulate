@@ -163,6 +163,7 @@ if isinstance(weq, gftIO.GftTable):
     # In [141]: weq.shape
     # Out[143]: (451, 3551)
 
+ROE_parsed = winsorize_mad(ROE_forecast)
 logger.debug('parse data finished!')
 
 target_symbols = historical_ret.columns.intersection(
@@ -269,5 +270,3 @@ if np.any(np.isnan(historical_ret)):
     df_single_return[np.isnan(df_single_return)] = 0.
 df_cum = (df_single_return + 1).cumprod(axis=0) - 1
 df_interval_agg_ret = df_cum - df_cum.shift(la_period)
-
-#ROE_parsed = winsorize_mad(ROE_forecast)

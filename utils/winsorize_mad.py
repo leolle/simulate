@@ -78,7 +78,7 @@ def winsorize_mad(x, maxValue=5, keepOrder=0):
     result = pd.concat(ls_mad_result)
     return result.pivot(
         index='date', columns='variable', values='value').dropna(
-            how='all', axis=1)
+            how='all', axis=1, inplace=True)
 
 
 if __name__ == '__main__':
