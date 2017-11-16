@@ -2,12 +2,11 @@
 import logging
 import numpy as np
 import pandas as pd
-import re
-import cvxpy as cvx
 from copy import copy
 from lib.gftTools import gftIO
 from scipy import linalg
 import matplotlib.pyplot as plt
+from utils.winsorize_mad import winsorize_mad
 
 
 def omega(P, confidence, tau):
@@ -113,6 +112,18 @@ def black_litterman_optimization(delta, weq, P, Q, tau, Sigma, C):
     return [er, w, lmbda]
 
 
+def forecast_ret(indicator, la_period, stock_ret, quantile):
+    """ use lookahead bias via indicator to predict x period stock return
+    filter the first x quantile stocks at current period.
+    use the x period return as the stock forecast.
+    Keyword Arguments:
+    indicator -- ROE, PB, etc.
+    la_period -- lookahead period, days
+    stock_ret -- stock return
+    """
+    pass
+
+
 logger = logging.getLogger()
 handler = logging.StreamHandler()
 formatter = logging.Formatter(
@@ -120,18 +131,21 @@ formatter = logging.Formatter(
 handler.setFormatter(formatter)
 if not logger.handlers:
     logger.addHandler(handler)
-    logger.setLevel(logging.INFO)
+    logger.setLevel(logging.DEBUG)
 
-C = gftIO.zload("/home/weiwu/share/black_litterman/C.pkl")
-ROE = gftIO.zload("/home/weiwu/share/black_litterman/ROE_cur_year.pkl")
-delta = gftIO.zload("/home/weiwu/share/black_litterman/delta.pkl")
-historical_ret = gftIO.zload(
-    "/home/weiwu/share/black_litterman/historical_ret.pkl")
-# Q = gftIO.zload("/home/weiwu/share/black_litterman/Q.pkl")
-tau = gftIO.zload("/home/weiwu/share/black_litterman/tau.pkl")
-weq = gftIO.zload("/home/weiwu/share/black_litterman/weq.pkl")
+    C = gftIO.zload("/home/weiwu/share/black_litterman/C.pkl")
+    ROE = gftIO.zload("/home/weiwu/share/black_litterman/ROE_cur_year.pkl")
+    ROE_forecast = gftIO.zload(
+        "/home/weiwu/share/black_litterman/ROE_cur_year.pkl")
+    delta = gftIO.zload("/home/weiwu/share/black_litterman/delta.pkl")
+    historical_ret = gftIO.zload(
+        "/home/weiwu/share/black_litterman/historical_ret.pkl")
+    # Q = gftIO.zload("/home/weiwu/share/black_litterman/Q.pkl")
+    tau = gftIO.zload("/home/weiwu/share/black_litterman/tau.pkl")
+    weq = gftIO.zload("/home/weiwu/share/black_litterman/weq.pkl")
 if isinstance(historical_ret, gftIO.GftTable):
     historical_ret = historical_ret.asMatrix().copy()
+    # historical_ret.fillna(0)
     # In [139]: historical_ret.shape
     # Out[140]: (451, 3437)
 
@@ -139,10 +153,9 @@ if isinstance(ROE, gftIO.GftTable):
     # views on all assets are not required
     ROE = ROE.asMatrix().copy()
     ROE.fillna(method='ffill', inplace=True)
-    ROE.fillna(method='bfill', inplace=True)
 
-    # In [131]: ROE.shape
-    # Out[138]: (490, 7018)
+# In [131]: ROE.shape
+# Out[138]: (490, 7018)
 
 if isinstance(weq, gftIO.GftTable):
     weq = weq.asMatrix().copy()
@@ -173,6 +186,14 @@ target_symbols = [
 ]
 logger.debug('select symbols %s', target_symbols)
 
+# Equilibrium covariance matrix
+C = .8  # confidence level, simply use a real number
+delta = 3.5
+la_period = 30
+logger.info('confidence level %s', C)
+logger.info('tau %s', tau)
+logger.info('delta %s', delta)
+
 # calculate market capitalization weight for each asset
 dt_target = target_dates[-1]
 dt_1Y_pre = dt_target - pd.DateOffset(years=1)
@@ -185,12 +206,6 @@ weight = market_capital / market_capital.sum()
 # use mean as equilibrium return of the stocks
 df_equilibrium = historical_ret.loc[dt_1Y_pre:dt_target, target_symbols].mean()
 
-# Equilibrium covariance matrix
-C = .8  # confidence level, simply use a real number
-delta = 3.5
-logger.info('confidence level %s', C)
-logger.info('tau %s', tau)
-logger.info('delta %s', delta)
 Sigma = historical_ret.loc[dt_1Y_pre:dt_target, target_symbols].fillna(
     0).cov().values
 V = Sigma * C
@@ -222,25 +237,37 @@ ts = tau * V
 middle = linalg.inv(np.dot(np.dot(P, ts), P.T) + Omega)
 logger.debug('Middle %s', middle)
 # print(Q - np.expand_dims(np.dot(P, pi.T), axis=1))
+
 # posterior estimate of the returns
-er = np.expand_dims(
-    pi, axis=0).T + np.dot(
-        np.dot(np.dot(ts, P.T), middle),
-        (Q - np.expand_dims(np.dot(P, pi.T), axis=1)))
-# Compute posterior estimate of the uncertainty in the mean
-# This is a simplified and combined version of formulas (9) and (15)
-posteriorSigma = V + ts - ts.dot(P.T).dot(middle).dot(P).dot(ts)
-logger.debug('posterior Sigma %s', posteriorSigma)
-# Compute posterior weights based on uncertainty in mean
-w = er.T.dot(linalg.inv(delta * posteriorSigma)).T
-#result = black_litterman_optimization(
-#    delta=delta, weq=weight, P=P, Q=Q, tau=tau, Sigma=Sigma)
-logger.info('unconstrainted optimized weight %s', w)
-rets = pd.DataFrame(df_equilibrium, columns=['mean'])
-# implied equiblirium return
-rets['ier'] = pi
-# estimate equiblirium return
-rets['eer'] = er
-# prediction from investors views
-rets['prediction'] = Q
-rets.to_csv('returns.csv')
+
+# er = np.expand_dims(
+#     pi, axis=0).T + np.dot(
+#         np.dot(np.dot(ts, P.T), middle),
+#         (Q - np.expand_dims(np.dot(P, pi.T), axis=1)))
+# # Compute posterior estimate of the uncertainty in the mean
+# # This is a simplified and combined version of formulas (9) and (15)
+# posteriorSigma = V + ts - ts.dot(P.T).dot(middle).dot(P).dot(ts)
+# logger.debug('posterior Sigma %s', posteriorSigma)
+# # Compute posterior weights based on uncertainty in mean
+# w = er.T.dot(linalg.inv(delta * posteriorSigma)).T
+# #result = black_litterman_optimization(
+# #    delta=delta, weq=weight, P=P, Q=Q, tau=tau, Sigma=Sigma)
+# logger.info('unconstrainted optimized weight %s', w)
+# rets = pd.DataFrame(df_equilibrium, columns=['mean'])
+# # implied equiblirium return
+# rets['ier'] = pi
+# # estimate equiblirium return
+# rets['eer'] = er
+# # prediction from investors views
+# rets['prediction'] = Q
+# rets.to_csv('returns.csv')
+if len(historical_ret) < 1:
+    logging.ERROR('not enough historical data')
+
+if np.any(np.isnan(historical_ret)):
+    df_single_return = historical_ret.copy()
+    df_single_return[np.isnan(df_single_return)] = 0.
+df_cum = (df_single_return + 1).cumprod(axis=0) - 1
+df_interval_agg_ret = df_cum - df_cum.shift(la_period)
+
+#ROE_parsed = winsorize_mad(ROE_forecast)

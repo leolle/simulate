@@ -27,6 +27,8 @@ b'\x97Dw\xe9\xeezZ\rRC\n\x1aF.\x85\xab'                       1.129031e+05
 
 import numpy as np
 import pandas as pd
+from lib.gftTools import gftIO
+import matplotlib.pyplot as plt
 
 
 def Mad(x, maxValue, keepOrder, date):
@@ -68,10 +70,17 @@ def Mad(x, maxValue, keepOrder, date):
         return raw_return
 
 
-def WinsorizeMad(x, maxValue=5, keepOrder=0):
-    x = x.asColumnTab()
+def winsorize_mad(x, maxValue=5, keepOrder=0):
+    x = x.asColumnTab().copy()
     ls_date = np.unique(x.idname)
 
     ls_mad_result = [Mad(x, maxValue, keepOrder, date) for date in ls_date]
     result = pd.concat(ls_mad_result)
-    return result
+    return result.pivot(
+        index='date', columns='variable', values='value').dropna(
+            how='all', axis=1)
+
+
+if __name__ == '__main__':
+    ROE = gftIO.zload("/home/weiwu/share/black_litterman/ROE_cur_year.pkl")
+    result = winsorize_mad(ROE)

@@ -22,7 +22,10 @@ gftIO.zdump(data, '/home/gft/data/file_name.zpkl')
 #+END_SRC
 
 ** transfer:
-
+- transfer column table to matrix
+#+BEGIN_SRC python
+result.pivot(index='date',columns='variable',values='value')
+#+END_SRC
 - b char array to GID
 #+BEGIN_SRC python
 

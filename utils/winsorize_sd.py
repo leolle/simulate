@@ -8,6 +8,7 @@ Created on Wed May 31 16:01:27 2017
 
 import numpy as np
 import pandas as pd
+from lib.gftTools import gftIO
 
 
 def Sd(x, maxValue, rmMaxPct, rmMinPct, keepOrder, date):
@@ -66,3 +67,8 @@ def WinsorizeSd(x, maxValue=5, rmMaxPct=0, rmMinPct=0, keepOrder=0):
     result = pd.concat(ls_sd_result)
 
     return result
+
+
+if __name__ == '__main__':
+    ROE = gftIO.zload("/home/weiwu/share/black_litterman/ROE_cur_year.pkl")
+    result = WinsorizeSd(ROE)
