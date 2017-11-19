@@ -161,8 +161,9 @@ idx_symbol = X.get_index('symbol')
 
 
 class RLMModel:
-""" create RLM regression module
-"""
+    """ create RLM regression module
+    """
+
     def __init__(self, arg):
         self.arg = arg
 
