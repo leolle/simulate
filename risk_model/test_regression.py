@@ -22,14 +22,14 @@ if not logger.handlers:
 
 time = pd.date_range('2000-01-01', freq='D', periods=432)
 X = xr.DataArray(
-    np.random.randn(432, 10, 3), [('date', time), ('stock', list('abcdefghij')),
-                                  ('factor', list('xyz'))])
+    np.random.randn(432, 10, 3),
+    [('date', time), ('symbol', list('abcdefghij')), ('factor', list('xyz'))])
 
 y = xr.DataArray(
-    np.random.randn(432, 10), [('date', time), ('stock', list('abcdefghij'))])
+    np.random.randn(432, 10), [('date', time), ('symbol', list('abcdefghij'))])
 
 
-def regression(X, Y, constraint1, constraint2, constraint3):
+def regression(X, Y):
     """ regression X by Y
     Keyword Arguments:
     X           --
@@ -103,22 +103,22 @@ def xr_regression_resid(y):
 
 # create regression result dateframe
 params = pd.DataFrame(index=X.date, columns=X.factor)
-residuals = pd.DataFrame(index=X.date, columns=X.stock)
+residuals = pd.DataFrame(index=X.date, columns=X.symbol)
 # get the datetimeindex
 idx_date = y.get_index('date')
-for dt in y.date.values:
-    cur_date = pd.Timestamp(dt)
-    #print(cur_date)
-    # get the position of current date
-    dt_pos = idx_date.get_loc(cur_date)
-    if dt_pos == 0:
-        continue
-    dt_pre_pos = dt_pos - 1
-    model = sm.RLM(
-        y[dt_pos].values, X[dt_pre_pos].values, M=sm.robust.norms.HuberT())
-    results = model.fit()
-    params.loc[cur_date] = results.params
-    residuals.loc[cur_date] = results.resid
+# for dt in y.date.values:
+#     cur_date = pd.Timestamp(dt)
+#     #print(cur_date)
+#     # get the position of current date
+#     dt_pos = idx_date.get_loc(cur_date)
+#     if dt_pos == 0:
+#         continue
+#     dt_pre_pos = dt_pos - 1
+#     model = sm.RLM(
+#         y[dt_pos].values, X[dt_pre_pos].values, M=sm.robust.norms.HuberT())
+#     results = model.fit()
+#     params.loc[cur_date] = results.params
+#     residuals.loc[cur_date] = results.resid
 """
 ------------------------------------------------------------------------------
 """
@@ -130,45 +130,57 @@ residuals = pd.DataFrame(index=X.date, columns=X.symbol)
 idx_date = y.get_index('date')
 idx_symbol = X.get_index('symbol')
 
-for dt in y.date.values:
-    logger.debug('regression on %s', dt)
-    cur_date = pd.Timestamp(dt)
-    # get the position of current date
-    dt_pos = idx_date.get_loc(cur_date)
-    if dt_pos == 0:
-        continue
-    dt_pre_pos = dt_pos - 1
-    # symbols having valid value(not nan)
-    s = X[:, dt_pre_pos].notnull().all(axis=0)
-    valid_x = X[:, dt_pre_pos, s].symbol.values
+# for dt in y.date.values:
+#     logger.debug('regression on %s', dt)
+#     cur_date = pd.Timestamp(dt)
+#     # get the position of current date
+#     dt_pos = idx_date.get_loc(cur_date)
+#     if dt_pos == 0:
+#         continue
+#     dt_pre_pos = dt_pos - 1
+#     # symbols having valid value(not nan)
+#     s = X[:, dt_pre_pos].notnull().all(axis=0)
+#     valid_x = X[:, dt_pre_pos, s].symbol.values
 
-    w = y.loc[cur_date].notnull()
-    valid_y = y.loc[cur_date, w].symbol.values
+#     w = y.loc[cur_date].notnull()
+#     valid_y = y.loc[cur_date, w].symbol.values
 
-    valid_symbol = np.intersect1d(valid_x, valid_y)
-    try:
-        model = sm.RLM(
-            y.loc[cur_date, valid_symbol].values,
-            X.isel(
-                date=dt_pre_pos,
-                symbol=idx_symbol.get_indexer(valid_symbol)).values.T,
-            M=sm.robust.norms.HuberT())
-        results = model.fit()
-    except ValueError:
-        continue
-    params.loc[cur_date] = results.params
-    residuals.loc[cur_date, valid_symbol] = results.resid
+#     valid_symbol = np.intersect1d(valid_x, valid_y)
+#     try:
+#         model = sm.RLM(
+#             y.loc[cur_date, valid_symbol].values,
+#             X.isel(
+#                 date=dt_pre_pos,
+#                 symbol=idx_symbol.get_indexer(valid_symbol)).values.T,
+#             M=sm.robust.norms.HuberT())
+#         results = model.fit()
+#     except ValueError:
+#         continue
+#     params.loc[cur_date] = results.params
+#     residuals.loc[cur_date, valid_symbol] = results.resid
 
 
 class RLMModel:
-
+""" create RLM regression module
+"""
     def __init__(self, arg):
         self.arg = arg
 
-    def fit(self, X, y):
+    def fit(self, y, X):
         model = sm.RLM(y, X, M=sm.robust.norms.HuberT())
         return model.fit()
 
 
-a = RLMModel(0)
-gftIO.zdump(a, 'test.zpkl')
+regression = RLMModel(0)
+cur_date = pd.Timestamp(y.date.values[1])
+#print(cur_date)
+# get the position of current date
+dt_pos = idx_date.get_loc(cur_date)
+if dt_pos == 0:
+    print('not enough data from X')
+dt_pre_pos = dt_pos - 1
+model = sm.RLM(
+    y[dt_pos].values, X[dt_pre_pos].values, M=sm.robust.norms.HuberT())
+results = regression.fit(y[dt_pos].values, X[dt_pre_pos].values)
+params.loc[cur_date] = results.params
+residuals.loc[cur_date] = results.resid
