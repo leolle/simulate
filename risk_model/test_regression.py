@@ -164,15 +164,15 @@ class RLMModel:
     """ create RLM regression module
     """
 
-    def __init__(self, arg):
-        self.arg = arg
+    def __init__(self):
+        pass
 
     def fit(self, y, X):
         model = sm.RLM(y, X, M=sm.robust.norms.HuberT())
         return model.fit()
 
 
-regression = RLMModel(0)
+regression = RLMModel()
 cur_date = pd.Timestamp(y.date.values[1])
 #print(cur_date)
 # get the position of current date
