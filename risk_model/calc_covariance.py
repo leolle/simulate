@@ -367,3 +367,8 @@ if not logger.handlers:
     # keep from double loading
 logger.debug('load xarray data')
 xr_exposure = gftIO.zload(os.path.join(risk_model_path, 'risk_model.zpkl'))
+
+# get the datetimeindex
+for dim in X.dims:
+    if X[dim].values.dtype == np.dtype('<M8[ns]'):
+        date = dim
