@@ -130,34 +130,34 @@ residuals = pd.DataFrame(index=X.date, columns=X.symbol)
 idx_date = y.get_index('date')
 idx_symbol = X.get_index('symbol')
 
-# for dt in y.date.values:
-#     logger.debug('regression on %s', dt)
-#     cur_date = pd.Timestamp(dt)
-#     # get the position of current date
-#     dt_pos = idx_date.get_loc(cur_date)
-#     if dt_pos == 0:
-#         continue
-#     dt_pre_pos = dt_pos - 1
-#     # symbols having valid value(not nan)
-#     s = X[:, dt_pre_pos].notnull().all(axis=0)
-#     valid_x = X[:, dt_pre_pos, s].symbol.values
+for dt in y.date.values:
+    logger.debug('regression on %s', dt)
+    cur_date = pd.Timestamp(dt)
+    # get the position of current date
+    dt_pos = idx_date.get_loc(cur_date)
+    if dt_pos == 0:
+        continue
+    dt_pre_pos = dt_pos - 1
+    # symbols having valid value(not nan)
+    s = X[:, dt_pre_pos].notnull().all(axis=0)
+    valid_x = X[:, dt_pre_pos, s].symbol.values
 
-#     w = y.loc[cur_date].notnull()
-#     valid_y = y.loc[cur_date, w].symbol.values
+    w = y.loc[cur_date].notnull()
+    valid_y = y.loc[cur_date, w].symbol.values
 
-#     valid_symbol = np.intersect1d(valid_x, valid_y)
-#     try:
-#         model = sm.RLM(
-#             y.loc[cur_date, valid_symbol].values,
-#             X.isel(
-#                 date=dt_pre_pos,
-#                 symbol=idx_symbol.get_indexer(valid_symbol)).values.T,
-#             M=sm.robust.norms.HuberT())
-#         results = model.fit()
-#     except ValueError:
-#         continue
-#     params.loc[cur_date] = results.params
-#     residuals.loc[cur_date, valid_symbol] = results.resid
+    valid_symbol = np.intersect1d(valid_x, valid_y)
+    try:
+        model = sm.RLM(
+            y.loc[cur_date, valid_symbol].values,
+            X.isel(
+                date=dt_pre_pos,
+                symbol=idx_symbol.get_indexer(valid_symbol)).values.T,
+            M=sm.robust.norms.HuberT())
+        results = model.fit()
+    except ValueError:
+        continue
+    params.loc[cur_date] = results.params
+    residuals.loc[cur_date, valid_symbol] = results.resid
 
 
 class RLMModel:
