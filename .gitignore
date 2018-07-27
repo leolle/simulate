@@ -11,3 +11,4 @@ optimization/cvxportfolio/
 optimization/painting/
 *.png
 *.log
+!data/quant_code/*
