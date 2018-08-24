@@ -6,9 +6,10 @@ PythonScripts/
 out.txt
 __pycache__/
 *.ipynb_checkpoints/
-*.ipynb
+#*.ipynb
 optimization/cvxportfolio/
 optimization/painting/
 *.png
 *.log
 !data/quant_code/
+!optimization/risk_parity/assets.csv
