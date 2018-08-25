@@ -11,6 +11,7 @@ from IPython.display import Image, display
 from scipy.optimize import minimize
 import time
 import logging
+
 logging.basicConfig(
     format='%(asctime)s : %(levelname)s : %(message)s', level=logging.DEBUG)
 
