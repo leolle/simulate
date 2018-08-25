@@ -12,4 +12,5 @@ optimization/painting/
 *.png
 *.log
 !data/quant_code/
+!data/stats/
 !optimization/risk_parity/assets.csv
