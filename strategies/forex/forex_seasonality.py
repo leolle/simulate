@@ -106,8 +106,10 @@ boxplot monthly log return of a pair from Jan to Dec
 """
 for sym in forex_list:
     ax, fig = plt.subplots(1,1,figsize=(8,4))
-    sns.boxplot(data=[log_returns[sym][log_returns[sym].index.month==s].dropna().values \
+    sns.boxplot(data=[log_returns.loc[log_returns.index.month==s, sym].dropna().values \
                 for s in range(1,13)])
+#    sns.boxplot(data=[log_returns[sym][log_returns[sym].index.month==s].dropna().values \
+ #               for s in range(1,13)])
     plt.title('seasonality in %s from 2005-2017'%sym)
     plt.xlabel('Months')
     ax.savefig(result_dir + ('seasonality in %s from 2005-2017.png'%sym))
@@ -118,8 +120,8 @@ barplot monthly log return of a pair from 2005 to 2017
 for sym in forex_list:
     ax, fig = plt.subplots(1,1,figsize=(8,4))
     plt.title('Monthly log return in %s from 2005 to 2017 in the month %s'%(sym, month))
-    sns.barplot(log_returns[sym].index[log_returns[sym].index.month==monthinteger].dropna().strftime("%Y-%m"),
-            log_returns[sym].ix[log_returns.index.month==monthinteger])
+    sns.barplot(log_returns[sym].loc[log_returns[sym].index.month==monthinteger].dropna().index.strftime("%Y-%m"),
+                log_returns[sym].ix[log_returns.index.month==monthinteger].dropna().values)
     ax.autofmt_xdate()
     ax.savefig(result_dir + 'Monthly log return in %s from 2005 to 2017 in the month %s.png'%(sym, month))
 

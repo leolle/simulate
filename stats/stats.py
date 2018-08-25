@@ -5,7 +5,6 @@ import os
 from lib.gftTools import gftIO
 from lib.gftTools import gsConst
 
-
 def cal_max_dd(df_single_return):
     """
     Determines the maximum drawdown of a strategy.
@@ -389,7 +388,7 @@ def latest_holding_num(df_holding):
     if len(df_holding) < 1:
         return np.nan
 
-    latest_holding_number = df_holding.count(axis=1).ix[-1]
+    latest_holding_number = df_holding.count(axis=1).iloc[-1]
 
     return latest_holding_number
 
@@ -414,7 +413,7 @@ def average_holding_num_percentage(df_holding, df_universe):
     if len(df_holding) < 1:
         return np.nan
 
-    df_count = df_universe.ix[df_holding.index].count(axis=1)
+    df_count = df_universe.loc[df_holding.index,:].count(axis=1)
     df_count = df_count[df_count > 0]
     avg_holding_num_pct = (df_holding.count(axis=1) / df_count).mean()
 
@@ -553,7 +552,7 @@ def aggregate_returns(df_single_return, convert_to):
 
     last_day = df_single_return.index[-1]
 
-    return cumulate_returns(df_single_return.ix[(last_day- pd.to_timedelta("%sday"%convert_to)):])
+    return cumulate_returns(df_single_return.loc[(last_day- pd.to_timedelta("%sday"%convert_to)):,:])
 
 
 def portfolio_market_ratio(df_holding, df_market_price, df_market_capital):
@@ -579,10 +578,10 @@ def portfolio_market_ratio(df_holding, df_market_price, df_market_capital):
 
     date_range = df_holding.index
 
-    df_holding_value = (df_holding * df_market_price.ix[date_range])
+    df_holding_value = (df_holding * df_market_price.loc[date_range,:])
     df_weight = df_holding_value.divide(df_holding_value.sum(axis=1), axis=0)
-    df_portfolio_market_ratio = (df_weight * df_market_capital.ix[date_range]).\
-                                sum(axis=1)/df_market_capital.ix[date_range].sum(axis=1)
+    df_portfolio_market_ratio = (df_weight * df_market_capital.loc[date_range,:]).\
+                                sum(axis=1)/df_market_capital.loc[date_range,:].sum(axis=1)
 
     return df_portfolio_market_ratio.mean()
 
@@ -608,7 +607,7 @@ def holding_dispersion_std(df_holding, df_market_price, period=gsConst.Const.DAI
 
     date_range = df_holding.index
 
-    df_holding_value = (df_holding * df_market_price.ix[date_range])
+    df_holding_value = (df_holding * df_market_price.loc[date_range,:])
     df_holding_value = df_holding_value.fillna(method='ffill')
     df_holding_ret = df_holding_value / df_holding_value.shift(1) - 1
     df_holding_ret = df_holding_ret
