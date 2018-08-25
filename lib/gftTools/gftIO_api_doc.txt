@@ -1,0 +1,171 @@
+两个概念： 可读，即UTF-8编码的字符串，如32位的GID字符串， 可理解：即有意义的单词、短语，如公司名字：广发银行。
+
+class GftTable  所有的j都会外面包一层这个
+下面两个是把matrix格式的dataframe转成col_table格式（long format）
+def convertMatrix2ColumnTab(matrix)
+def convertMatrix2ColumnTabWithName(matrix: pd.DataFrame, o_col_name='O0')
+def convertColumnTabl2Matrix(columnTab)  把col_table格式-> matrix
+def isNonSymbol(df) 测试是否是matrix格式的，并且只有一个columns，而且columns的名字是空
+上面4个函数都是GftTable里使用的。
+
+
+
+class gs_context: 主要用来告知本次计算实例的一些信息：
+    def __init__(self, myself, input_gid_list, my_meta=None, input_meta_list=None):
+        self.myself = myself    # 这个计算对应在neo4j的node的gid（如果有的话）
+        self.input_list = input_gid_list   # 输入的数据的 gid list
+        self.my_meta = my_meta			# meta
+        self.input_meta_list = input_meta_list # 输入的meta
+		
+def gen_gs_context_from_gid(my_gid, input_gid_list)  # c++调用 
+def gen_gs_context_with_meta(my_gid, input_gid_list, my_meta, input_meta_list) # c++调用
+def gen_gs_context_with_meta_and_dump_4_debug(my_gid, input_gid_list, my_meta, input_meta_list, file_path) # c++调用
+上面三个函数都是c++调用来生成context的
+
+
+
+一下6个函数都是为了c++ python互通的
+def transformO4Input(ndInput)   # c++调用的，从c++的格式->python格式.处理一列O的
+def transformOFromPandas2Output(ndOutput) # c++调用， 从pytho格式->c++格式  处理一列O的
+
+def transformTime4Input(tArr) 							# c++ 调用， 从c++格式-》python 处理一列T的
+def transformTime4Output(tArr) 							# c++调用， python->c++, 处理一列T的
+
+def transformOTInColumnTable(colTable) 					# c++调用， 从c++的 InMemOTVTable-> python的 dataframe（col_table格式）
+def transform2DataFrame(tableInput) 					# c++ 调用， 从c++的matPanel-> python的dataframe
+
+
+def getCacheHeader() 									# c++调用 生成cache的头，这个头需要c++中能解析 
+def zdump4CacheSever(value, timestamp, filename) 		# c++调用 写带有头文件cache,这个文件要被c++load起来,去掉头
+def zload4CacheServer(filename) 						# 仅供测试加载c++cache用
+def zdump(value, filename) 								#dump python格式的文件（没有头的pickle）
+def zload(filename) 									#load python的pickle文件，也仅供测试用
+def loadMeta(byteArray) 								# c++调用 加载meta的cache
+def getDataAndType(value) 								# c++调用，加载cache并返回类型的，
+def checkDataType(obj) 									# c++调用 用于获取python数据对应于c++中的类型
+def getDataFrameType(obj: pd.DataFrame)  				# c++调用 同上
+def transformDict(dic)  								# c++调用 转换一个dict
+def transformCppInput(data, parType) 					# c++调用 把c++数据转成 python的
+def transformInput(data) 								# c++调用 c++调用的入口点
+
+def transformOutputWithTypeGiven(obj, par_type) 		# c++调用 用于把python格式->c++格式，  这个是c++调用的入口点
+def transformOutput(obj)								# c++调用 python->c++
+def _frameToList(obj: pd.DataFrame)						# c++调用 python->c++ ,在transformOutput 被调用
+def _longFrameToList(obj)								# c++调用 python->c++ ,_frameToList 被调用
+def _wideFrameToTuple(obj)								# c++调用 python->c++ ,_frameToList 被调用
+
+
+下面4个函数都是为了把python输出的dataframe包成GftTable,这一步是计算平台默认做的，所以所有指令都可假定其拿到的dataframe都被包成了GftTable
+def transformMatrixWithGid(panel, gid)					# c++调用
+def transformMatrix(panel)								# c++调用
+def transformColumnTableWithGid(columnTable, gid)		# c++调用
+def transformColumnTable(columnTable) 					# c++调用
+
+
+
+
+下面n个函数都是用于处理meta信息，或者根据meta信息对输入输出进行按时间截取处理的
+def get_pt_name(data, from_meta) 						# c++调用 获取数据的主的T column的名字
+def slice_data_inplace_and_ret(data, pt_name, 
+				begin_time, end_time)					# c++调用
+def slice_column_table(column_table, pt_name,
+				begin_time, end_time)   				# c++调用
+def slice_matrix(matrix, begin_time, end_time)  		# c++调用
+def slice_table_inplace(gft_table,pt_name,
+				begin_time, end_time)  					# c++调用
+def slice_column_tab(data, begin_time, end_time,pt_name)# c++ 调用 
+
+def wrap_gfttable_dataframe_clean_gid(obj)				# c++调用， 已废弃
+def wrap_gfttable_dataframe_with_gid(obj, gid)			# c++调用， 已废弃
+def is_serializable_2_cpp(obj) 							# c++调用， 已废弃
+
+
+以上都和c++ <-> python 之间数据互转相关
+
+def test_coord(l_val, r_val) 							# c++调用测试两个index是否相同
+def test_dataframe(l_val: 								# c++调用pd.DataFrame, r_val: pd.DataFrame) 测试两个dataframe是否相同
+def test_gft_table(l_val, r_val)  						# c++调用  测试两个gftTable是否相同，
+def test_np_darray(l_val, r_val)  						# c++调用 测试两个numpy array
+def test_dict(l_val, r_val, recursive) 					# c++调用 测试两个dict
+def testTwoDic(old_dict, new_dict, function_name) 		# c++调用 c++调用入口点
+def test_equality(l_val, r_val, recursive)  			# c++调用 测试两个值是否相等
+def copyAndSave(key, value, old_dict, new_dict) 		# c++调用把数据保存并返回一个copy
+以上8个函数都是用在precheck模式下，检查指令是否会更改其输入的数据
+
+
+上面这几都是c++调用的，用户不要用
+
+
+#和c++一样的对数据类型枚举的定义
+PARAMETER_TYPE_ERROR = int(0)
+PARAMETER_TYPE_STRING = int(1)
+PARAMETER_TYPE_TIMESTAMP = int(2)
+PARAMETER_TYPE_PANEL = int(3)
+PARAMETER_TYPE_OBJECT_SET = int(5)
+PARAMETER_TYPE_FREQUENCY = int(6)
+PARAMETER_TYPE_PARAMETERDICT = int(15)
+PARAMETER_TYPE_NUMBER_INT = int(20)
+PARAMETER_TYPE_NUMBER_NUMRIC = int(21)
+PARAMETER_TYPE_OnTnVn_TABLE = int(22)
+PARAMETER_TYPE_PYTHON_ONLY = int(25)
+PARAMETER_TYPE_UUID = int(4)
+
+一下是为了方便使用的
+def get_column_type(col_table: pd.DataFrame, name: str) # 获取列的类型，返回值参见上面，只处理一列
+def get_columns_type_dict(col_table: pd.DataFrame) # 获取列的类型，返回值参见上面,返回全部
+
+def istimestamparray(array) 测试是否是一个timestamp
+def ismatrix(df: pd.DataFrame) 测试是否是matrix格式的，并且只有一个columns，而且columns的名字是空
+
+def gs_day_2_pd_dt(days) 把GS内的时间格式（1800年开始天数）转成timestamp
+
+
+def binary_to_str(bs) 用于把一个binary的gid转成可读的GID字符串
+def gid_str_to_bin(str) 把可读的GID字符串转成binary的，即binary_to_str反向操作
+
+def get_primary_t_name_with_def(data, pt_name) 获取一个coltable的dataframe的主T的名字
+
+
+
+
+
+def gidStrHex2IntPairs(gid_str) #供gidStrArray2CharArray调用
+def gidStrArray2CharArray(gid_arr: np.array)   #同下
+def strSet2Np(gid_arr: np.array) # 把Hex类型的32位字符串，转成c++能理解的binary格式
+def testGidStr2Np() # strSet2Np的测试函数，
+上面4个函数，是把可读的 GID -> 不可读，但是能返回给c++的bianry格式
+
+
+def gidInt2Str(gid) # 这个名字不好，其实做的是从binary格式的chararray转成可读的 GID格式
+
+
+
+下面几个函数都是用于处理把不可理解的GID 转换成可理解有意义的名字（node的名字）
+def getDataframe(gft_tab: GftTable)
+def loadAndResave(file_name)
+def mergeName(ootv, namemap)
+def rename_o_t_colname_in_place(tb: pd.DataFrame)
+def intTuple2Str(tup2Int) 		# 内部函数,供下面的oSet2Hex调用
+def oSet2Hex(oSet) 				# 把c++类型的O列，转成可读的GID字符串。这个函数不应该被用户调用
+def transform_o_2_name_4_nparray(arr, nameMap, is_binary=True)
+def transform_o_2_name_4_dataframe(df, nameMap, is_binary=True)
+def transform_o_2_name(data, namemap, is_binary)
+def transform_bin_o_2_str(data)
+def load_transform_and_save_data(data_file_name, file_name, zip_lvl = 5)
+def load_and_save_2_csv_file(data_file, csv_file = None)
+def transfrom_str_o_2_name_with_file(dic, map_file_name="lib/gftTools/symbols_str.pkl") 
+上面这些都是内部调用
+
+def transform_o_2_name_with_file(dic, map_file_name="lib/gftTools/symbols.pkl") 调用这个来转换实际的测试数据。
+
+
+
+
+环境相关：
+def get_inst_gid() 获取本次计算的inst_gid,简单说，每次计算都会分配一个随机的gid，不会重复
+
+
+
+
+
+
