@@ -11,16 +11,11 @@
 #+EXCLUDE_TAGS: noexport
 #+CREATOR: Emacs 24.5.1 (Org mode 8.3.4)
 
-Simulate is a package for simulating and optimizing multi-period investment.
+Simulate is a python library for risk modeling, find alpha, portfolio optimization and simulation. It is written in Python, its major dependencies are cvxpy and pandas.
 
-Simulate is a python library for portfolio optimization and simulation. It is written in Python, its major dependencies are cvxpy and pandas.
-
-The simulator is able to simulate the evolution of a portfolio, taking into account asset returns, transaction costs, and holding costs. The package includes simple but reasonable models of transaction cost based on asset bid-ask spread, volume, and volatility.
+The simulator is a package for simulating and optimizing multi-period investment, it is able to simulate the evolution of a portfolio, taking into account asset returns, transaction costs, and holding costs. The package includes simple but reasonable models of transaction cost based on asset bid-ask spread, volume, and volatility.
 
 I consider a basic model of multi-period trading, which can be used to evaluate the performance of a trading strategy. We describe a framework for single-period optimization, where the trades in each period are found by solving a convex optimization problem that trades off expected return, risk, transaction costs.
-
-# todo
-# holding costs such as the borrowing cost for shorting assets.
 
 Simulate provides functionality for implementing trading strategies using the convex optimization package CVXPY.
 
@@ -44,35 +39,32 @@ conda install -c cvxgrp cvxpy
 conda install nose
 nosetests simulate
 #+END_SRC
+4. add build-in packages into Python path.
+#+BEGIN_SRC bash
+export PYTHONPATH=./lib/:$PYTHONPATH
+#+END_SRC
+
+* Risk Model:
+[[file:./risk_model/readme.org][Risk Modeling]]
+Risk model is a multi-factor model using linear regression to measure the overall risk associated with a security relative to the market.
+
+It is used for multiple ways, e.g. portfolio optimization, portfolio return &risk contribution.
+
+* factor model
+[[file:./factor/readme.org][Factor Model]]
+To find alpha by a factor.
+1. Select stocks by quantile using a factor screener.
+2. Generate a portfolio with equally weighted stocks.
 
 * optimization:
+There are three optimization strategies provided in the library, mvo, black litterman and risk parity.
+
+The fundamental introduction of these optimization methods and how-to run instruction are listed under below.
 - [[file:./optimization/mean_variance/readme.org][Mean Variance Optimization]]
 - [[file:./optimization/black_litterman/readme.org][Black Litterman]]
 - [[file:./optimization/risk_parity/readme.org][Risk Parity]]
+
 * simulation/backtest
-* factor tests
+Backtest a portfolio with data like price, volume, stock portfolio weight, trading cost, dividend, splits, etc.
+
 * strategy
-
-** monitor global etf performance
-*** TODO fetch global etf data
-- [ ] use threading to do multi-task. Fully understanding threading.
-*** use PCA to get most dominant stocks.
-* Graphic Strategist
-** FS 拓扑
-- Function Define, Function Define + Parameters -> Function Instance.
-把FD绑定参数之后生成FI.
-- Function Define -> Function Sampling.
-FS由FD搭建。
-- Function Sampling Define, Function Sampling Instance.
-也可以通过把FSD绑定参数，产生FSI。
-- Function Queue, Function Queue Instance.
-当FS跑出大量FSI之后，需要设置筛选条件来取出符合要求的FSI，这个时候需要设定FQ，同时通过FQI来取目标FSI。
-
-** 单因子流程
-
-** 文档
-
-** 股票因子
-** 股票策略
-** 函数采样
-** 函数定义
