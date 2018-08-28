@@ -9,7 +9,6 @@ __pycache__/
 #*.ipynb
 optimization/cvxportfolio/
 optimization/painting/
-*.png
 *.log
 !data/quant_code/
 !data/stats/*.pkl
