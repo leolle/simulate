@@ -23,23 +23,27 @@ The package relies on Pandas for data handling (e.g., prices, returns, volumes).
 
 See the examples for basic usage.
 
-* Install Anaconda
-1. Install pandas
+* Installation
+1. Install Anaconda
+
+2. Install required packages
 #+BEGIN_SRC bash
-conda install pandas
+pip install -r requirements.txt
 #+END_SRC
-2. Install cvxpy (if it doesn't work, follow instructions here)
+
+3. Install cvxpy (if it doesn't work, use pip install)
 #+BEGIN_SRC bash
 conda install -c conda-forge lapack
 conda install -c cvxgrp cvxpy
 #+END_SRC
 
-3. Test the installation with nose
+4. Test the installation with nose
 #+BEGIN_SRC bash
 conda install nose
 nosetests simulate
 #+END_SRC
-4. add build-in packages into Python path.
+
+5. add build-in packages into Python path.
 #+BEGIN_SRC bash
 export PYTHONPATH=./lib/:$PYTHONPATH
 #+END_SRC
