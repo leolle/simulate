@@ -68,9 +68,13 @@ There are three optimization strategies provided in the library, mvo, black litt
 
 The fundamental introduction of these optimization methods and how-to run instruction are listed under below.
 - [[file:./optimization/mean_variance/readme.org][Mean Variance Optimization]]
-- [[file:./optimization/black_litterman/readme.org][Black Litterman]]
-- [[file:./optimization/risk_parity/readme.org][Risk Parity]]
+[[./optimization/mean_variance/images/markowitz.png]]
 
+- [[file:./optimization/black_litterman/readme.org][Black Litterman]]
+[[./optimization/black_litterman/images/black_litterman.png]]
+
+- [[file:./optimization/risk_parity/readme.org][Risk Parity]]
+[[./optimization/risk_parity/images/balanced_risk_allocation.png]]
 * simulation/backtest
 Backtest a portfolio with data like price, volume, stock portfolio weight, trading cost, dividend, splits, etc.
 
