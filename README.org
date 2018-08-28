@@ -50,6 +50,9 @@ export PYTHONPATH=./lib/:$PYTHONPATH
 
 * Risk Model:
 [[file:./risk_model/readme.org][Risk Modeling]]
+
+[[./risk_model/images/input_workflow.png]]
+
 Risk model is a multi-factor model using linear regression to measure the overall risk associated with a security relative to the market.
 
 It is used for multiple ways, e.g. portfolio optimization, portfolio return &risk contribution.

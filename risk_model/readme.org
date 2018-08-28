@@ -63,4 +63,6 @@ factor return and covariance matrix:
 [[./images/output_factor_returns_and_covariance_matrix.png]]
 
 specific risk and risk forecast:
+[[./images/output_specific_return_and_risk.png]]
+
 [[./images/specific_risk_model.png]]
