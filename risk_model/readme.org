@@ -15,7 +15,19 @@
 
 The Risk Factor Analysis is a multi-factor model, used to measure the overall risk associated with a security relative to the market. Risk Factor Analysis incorporates over 40 data metrics, including earnings growth, share turnover and senior debt rating. The model then measures risk factors associated with three main components: industry risk, risk from exposure to different investment themes and company-specific risk.
 
+Risk model can be applied in different ways:
+- optimization bias adjustment
+[[./images/optimization_bias_adjustment.png]]
+- volatility regime adjustment
+[[./images/volatility_regime_adjustment.png]]
+- specific risk model
+[[./images/specific_risk_model.png]]
+- systematic equity strategy factors
+[[./images/systematic_equity_strategy_factors.png]]
+
 * BREAKING DOWN 'Risk Factor Analysis'
+[[https://leolle.github.io/notes/finance/RiskModelHandbook/RiskModelHandbook.html][More details on risk factor analysis]]
+
 An element that investors and portfolio managers scrutinize when evaluating the markets or portfolios is investment risk. Identifying and measuring investment risk is one of the most important steps taken when deciding what assets to invest in. This is because the level of risk taken determines the level of return that an asset or portfolio of assets will have at the end of a trading cycle. Consequently, one of the most widely accepted financial principles is the tradeoff between risk and return.
 
 One method that a portfolio manager might use to measure investment risk is evaluating the impact of a series of broad factors on the performance of various assets or securities. Using a factor model, the return-generating process for a security is driven by the presence of the various common fundamental factors and the asset's unique sensitivities to each factor. Since a few important factors can explain the risk and return expected on an investment to a large degree, factor models can be used to evaluate how much of a portfolio's return is attributable to each common factor exposure. Factor models can be broken down into single-factor and multiple-factor models. One multi-factor model that can be used to measure portfolio risk is the Risk Factor Analysis model.
@@ -25,7 +37,30 @@ The Risk Factor Analysis incorporates a number of factors in its model that can 
 The Risk Factor Analysis model measures a security's relative risk with a single value-at-risk (VaR) number. This number represents a percentile rank between 0 and 100, with 0 being the least volatile and 100 being the most volatile, relative to the U.S. market. For instance, a security with a value-at-risk number of 80 is calculated to have a greater level of price volatility than 80% of securities in the market and its specific sector. So, if Amazon is assigned a VaR of 80, it means that its stock is more price volatile than 80% of the stock market or the sector in which the company operates.
 
 * Input Data
+The risk model use 5 datas to do linear regression:
+1. stock returns
+2. factor returns
+3. market capital
+4. correlation halflife
+5. variance halflife
+[[./images/fundamental_data_and_market_data.png]]
+
 
 * Run
+The workflow of risk analysis:
+[[./images/input_workflow.png]]
+
+The linear regression part:
+[[./images/precedure.png]]
+
+To run the program:
+#+BEGIN_SRC bash
+python main.py
+#+END_SRC
 
 * Output
+factor return and covariance matrix:
+[[./images/output_factor_returns_and_covariance_matrix.png]]
+
+specific risk and risk forecast:
+[[./images/specific_risk_model.png]]

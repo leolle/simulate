@@ -10,6 +10,11 @@ import statsmodels.api as sm
 from lib.gftTools import gftIO
 import datetime
 import logging
+from ylib import ylog
+
+ylog.set_level(logging.DEBUG)
+ylog.console_on()
+ylog.filelog_on("app")
 
 
 def risk_model(df_ret, dict_risk_expo, capital, corr_half_life, var_half_life):
@@ -44,7 +49,7 @@ def risk_model(df_ret, dict_risk_expo, capital, corr_half_life, var_half_life):
     """
 
     # get all factor names
-    logger.debug('parse data')
+    ylog.debug('parse data')
     ls_fexponame = list(
         map(gftIO.gidInt2Str, list(dict_risk_expo['osets'].asColumnTab()[
             'O0'])))
@@ -360,22 +365,20 @@ if not logger.handlers:
     logger.addHandler(handler)
     logger.setLevel(logging.DEBUG)
 
-    risk_model_path = '/home/weiwu/share/risk_model/'
+risk_model_path = '/home/weiwu/share/risk_model/'
 
-    # keep from double loading
-    stock_return = gftIO.zload(
-        os.path.join(risk_model_path, 'stock_return.pkl'))
-    factors = gftIO.zload(os.path.join(risk_model_path, 'factors.pkl'))
-    market_capital = gftIO.zload(
-        os.path.join(risk_model_path, 'market_capital.pkl'))
-    corr_half_life = gftIO.zload(
-        os.path.join(risk_model_path, 'corr_half_life.pkl'))
-    var_half_life = gftIO.zload(
-        os.path.join(risk_model_path, 'var_half_life.pkl'))
+# keep from double loading
+stock_return = gftIO.zload(os.path.join(risk_model_path, 'stock_return.pkl'))
+factors = gftIO.zload(os.path.join(risk_model_path, 'factors.pkl'))
+market_capital = gftIO.zload(
+    os.path.join(risk_model_path, 'market_capital.pkl'))
+corr_half_life = gftIO.zload(
+    os.path.join(risk_model_path, 'corr_half_life.pkl'))
+var_half_life = gftIO.zload(os.path.join(risk_model_path, 'var_half_life.pkl'))
 
-# model = risk_model(stock_return, factors, market_capital, corr_half_life,
-#                   var_half_life)
-logger.debug('parse data')
+model = risk_model(stock_return, factors, market_capital, corr_half_life,
+                   var_half_life)
+ylog.debug('parse data')
 
 # get all factor names
 ls_fexponame = factors['osets'].asColumnTab()['O0'].apply(
@@ -438,7 +441,7 @@ for num, fac in enumerate(ls_pd_all_factors):
 allfactor.append('country')
 
 # create 3d panel
-logger.debug('convert all factors&stocks to pandas panel')
+ylog.debug('convert all factors&stocks to pandas panel')
 pd_panel_factor = pd.Panel(
     {allfactor[key]: factor
      for key, factor in enumerate(ls_pd_all_factors)}).transpose(1, 2, 0)
@@ -450,6 +453,6 @@ df_sqrt_cap_return = df_sqrt_return.reindex(
 # df_sqrt_cap_return['constraint'] = 0
 
 # add constraint to all factors
-logger.debug('add constraint to all factors')
+ylog.debug('add constraint to all factors')
 
-logger.debug('load xarray data')
+ylog.debug('load xarray data')
