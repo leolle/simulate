@@ -1,0 +1,281 @@
+#+OPTIONS: ':nil *:t -:t ::t <:t H:3 \n:nil ^:t arch:headline author:t c:nil
+#+OPTIONS: creator:nil d:(not "LOGBOOK") date:t e:t email:nil f:t inline:t
+#+OPTIONS: num:t p:nil pri:nil prop:nil stat:t tags:t tasks:t tex:auto timestamp:t
+#+OPTIONS: title:t toc:t todo:t |:t
+#+TITLES: README
+#+DATE: <2017-06-21 Wed>
+#+AUTHORS: weiwu
+#+EMAIL: victor.wuv@gmail.com
+#+LANGUAGE: en
+#+SELECT_TAGS: export
+#+EXCLUDE_TAGS: noexport
+#+CREATOR: Emacs 24.5.1 (Org mode 8.3.4)
+
+Simulate is a package for simulating and optimizing multi-period investment.
+
+Simulate is a python library for portfolio optimization and simulation. It is written in Python, its major dependencies are cvxpy and pandas.
+
+The simulator is able to simulate the evolution of a portfolio, taking into account asset returns, transaction costs, and holding costs. The package includes simple but reasonable models of transaction cost based on asset bid-ask spread, volume, and volatility.
+
+I consider a basic model of multi-period trading, which can be used to evaluate the performance of a trading strategy. We describe a framework for single-period optimization, where the trades in each period are found by solving a convex optimization problem that trades off expected return, risk, transaction costs.
+
+# todo
+# holding costs such as the borrowing cost for shorting assets.
+
+Simulate provides functionality for implementing trading strategies using the convex optimization package CVXPY.
+
+The package relies on Pandas for data handling (e.g., prices, returns, volumes). Our simple examples show how Quandl can be used to import open source financial data, but any other source can be used instead.
+
+See the examples for basic usage.
+
+* Install Anaconda
+1. Install pandas
+#+BEGIN_SRC bash
+conda install pandas
+#+END_SRC
+2. Install cvxpy (if it doesn't work, follow instructions here)
+#+BEGIN_SRC bash
+conda install -c conda-forge lapack
+conda install -c cvxgrp cvxpy
+#+END_SRC
+
+3. Test the installation with nose
+#+BEGIN_SRC bash
+conda install nose
+nosetests simulate
+#+END_SRC
+
+* optimization:
+** logs:
+*** DONE position limit
+CLOSED: [2017-06-23 Fri 14:46]
+add position limit will cause rank(A) < p
+*** DONE maximum return subject to target risk.
+CLOSED: [2017-06-23 Fri 14:46]
+*** DONE add more constraint
+CLOSED: [2017-07-04 Tue 09:37]
+default None Value
+*** DONE find the reason of why optimal result can't be reached.
+CLOSED: [2017-06-25 Sun 20:35]
+*** DONE find the function running time.
+CLOSED: [2017-06-26 Mon 09:50]
+CPU total: 26us.
+Wall time: 548us.
+*** DONE factor exposure limit boundary.
+CLOSED: [2017-06-26 Mon 11:47]
+- create boundary dataframe, fill input dataframe na with 0 on lower bound, 1 on upper bound.
+default value from min and max of each factor.
+*** DONE integrate finished functions to GS .
+CLOSED: [2017-06-27 Tue 09:59]
+*** DONE sharpe portfolio.
+CLOSED: [2017-06-27 Tue 09:58]
+*** DONE calculate theoretical minimum and maximum theoretical returns from asset constraint.
+CLOSED: [2017-06-27 Tue 15:18]
+*** DONE calculate theoretical min and max theoretical returns from group constraint.
+CLOSED: [2017-06-28 Wed 14:32]
+*** DONE compare portfolio between maximum sharpe ratio portfolio and Mean-Variance portfolio.
+CLOSED: [2017-06-29 Thu 14:12]
+maximum sharpe ratio portfolio is compatible with weight and exposure constraint.
+*** DONE change modifying default constraint value.
+CLOSED: [2017-07-03 Mon 09:41]
+*** DONE what if input asset, group, exposure constraint symbols are not in the risk model?
+CLOSED: [2017-06-29 Thu 14:51]
+*** TODO make covariance matrix generation function for stocks.
+*** TODO add loss function objective.
+#+BEGIN_SRC equation
+LossFunction = -ret + \lambda * \sigma + \beta * TransactionCost
+#+END_SRC
+*** TODO use expcted return.
+*** TODO change Quadratic Programming(QP) problem for sharpe ratio portfolio to quadratically constrained quadratic program (QCQP).
+QP is a subclass of QCQP, so as one would imagine, it is more difficult to solve QCQP, but luckily CVXOPT is up to the task after we convert the QCQP into an even more general class of optimization problems - second-order cone programs (SOCP).
+**** QCQPs to SOCPs
+CVXOPT does not have an explicit solver for QCQPs, rather we must convert the QCQP to a SOCP, or one could also convert it to a semidefinite program (SDP), which is more general than a SOCP.
+#+BEGIN_SRC latex
+minimize:
+Σx
+subject to:
+x^TΣx≤\sigma_max
+1^Tx=1
+x≥0
+#+END_SRC
+*** TODO change input: covariance matrix.
+*** TODO opt for multiperiod.
+*** TODO select groups bug.
+*** group constraint return limit.
+*** Use Constraint Attribution to understand the costs of your constraints.
+provides a dashboard view of the impact of individual constraints, objectives or groups of constraints
+on the objective function value (usually portfolio return) in your strategy. This tells you which elements of your strategy have an overall impact and which do not. It also provides a relative measure of the potential for improving the objective by relaxing different constraints.
+*** TODO add transaction cost.
+multi-period optimization.
+try to minimize the transaction weight.
+minimize loss function using sci.optmize.minimize
+*** test the constraints.
+*** change random selected symbols to ranked symbols.
+*** Objective frontiers
+can be used to create a classical mean variance frontier or to explore trade-offs, such as return vs. transaction costs or risk vs. tax liability.
+*** TODO change target date optimization to multi-period optimization at seleting df_assets symbols.
+*** pack factor exposure to pandas panel
+*** make forecasted return for each asset
+*** add group factor exposure
+*** reindex:
+- factors:
+factor exposure
+constraint
+
+- symbols
+covariance, delta, f, constraint
+** 示例：
+
+** 输入参数：
+#+BEGIN_SRC parameter
+    target_mode: int
+        target optimization type
+        0: minimum risk.
+        1: minimum risk subject to target return.
+        2: maximum sharpe ratio subject to target risk.
+        3: loss function.
+
+    position_limit: int
+        maximum position number selected.
+
+    cov_matrix: OOTV
+        covariance matrix from risk model if holdings are stocks.
+        factor_exposure_matrix.dot(covariance_matrix).dot(factor_exposure_matrix.T)
+
+    specific_risk: OTV
+        O: stocks symbol. None for funds.
+
+    asset_return: Dataframe, OTV,
+        forecasted asset return for all symbols.
+        index=date, O: asset names, V: asset return.
+
+    asset_weight: Dataframe, OOTV
+        T=date, O: asset names, O: group names, V: asset weight.
+        weight bound of each asset. Default is equal weight.
+
+    target_return: double
+        Target return for portfolio respected to benchmark.
+
+    target_risk: double
+        Portfolio risk tolerance whose objective is maximum return.
+
+    start_date: Timestamp
+        start date for multiperiod optimization.
+
+    end_date: Timestamp
+        end date for multiperiod optimization, should be in range of asset return and asset weight date.
+
+    asset_constraint: OVV
+        input asset constraint, V1: lower boundary, V2: upper boundary.
+
+    group constraint: OVV
+        input group constraint, V1: lower boundary, V2: upper boundary.
+
+    exposure constraint: OVV
+        input factor exposure constraint, V1: lower boundary, V2: upper boundary.
+
+    alpha_return: double
+        coefficient number to adjust target return.
+        target_return = target_return * alpha_return
+
+    lambda_risk: double
+        coefficient number to adjust target risk
+        target_risk = target_risk * lambda_risk
+
+    beta_tranaction: double
+        multi-period transaction cost adjustment number.
+
+
+    Returns:
+    ----------
+    df_result: DataFrame
+        Optimized value of weight.
+        Index: target date.
+        Columns: assets names.
+#+END_SRC
+** 最小化风险：
+J GID：
+A42325FC45B9D55C7C05056721AE3A88
+输入设置：
+
+输出结果：
+
+**** 在满足输入回报下，最小化风险；
+请手动更改设置模式。
+
+**** 在满足输入风险下，最大化收益。
+J GID：
+0AB023977FD09C6BE8196C351D41A098
+模式3计算时间大概需要10分钟。
+
+**** 根据active portfolio management与axioma做出类似产品效果， 修改constraint条件。
+** 功能：
+*** 3种模式：
+Portfolios are points from a feasible set of assets that constitute an asset universe. A portfolio specifies either holdings or weights in each individual asset in the asset universe. The convention is to specify portfolios in terms of weights, although the portfolio optimization tools work with holdings as well.
+The set of feasible portfolios is necessarily a nonempty, closed, and bounded set. The proxy for risk is a function that characterizes either the variability or losses associated with portfolio choices. The proxy for return is a function that characterizes either the gross or net benefits associated with portfolio choices. The terms "risk" and "risk proxy" and "return" and "return proxy" are interchangeable. The fundamental insight of Markowitz (see Portfolio Optimization) is that the goal of the portfolio choice problem is to seek minimum risk for a given level of return and to seek maximum return for a given level of risk. Portfolios satisfying these criteria are efficient portfolios and the graph of the risks and returns of these portfolios forms a curve called the efficient frontier.
+**** subject to loss function.
+f(\alpha, \lambda , \beta) = -\alpha ret + \lambda \sigma + \beta transaction_cost
+**** 最小化风险；
+**** 在满足输入回报下，最小化风险；
+**** 在满足输入风险下，最大化收益。
+***** Second Order Cone Programming with CVXOPT
+CVXOPT is a convex optimization package for Python that includes a Second Order Cone Programming (SOCP) solver.  The SOCP solver takes a set of matrices that describe the SOCP problem, but these matrices are different than the matrices usually used to express the SOCP problem.  This post walks through the simple algebra steps to find relationship between the two formulations of the SOCP problem.
+
+The SOCP problem as described in Wikipedia or the excellent free book Convex Optimization by Boyd and Vandenberghe includes the constraint:
+$\| A x + b \|_2 \leq c^T x + d$
+
+We can rewrite this to be:
+
+\begin{bmatrix} c^T \\ A \end{bmatrix} + \begin{bmatrix} d \\ b \end{bmatrix} = \begin{bmatrix} s_0 \\ s_1 \end{bmatrix}, \qquad s_0 \geq \| s_1 \|_2
+
+Now to rearrange into the format expected by the CVXOPT solver:
+
+- \begin{bmatrix} c^T \\ A \end{bmatrix} + \begin{bmatrix} s_0 \\ s_1 \end{bmatrix} = \begin{bmatrix} d \\ b \end{bmatrix}
+
+And then see the relationship between the two formulations of the SOCP problem are equivalent:
+
+G= \begin{bmatrix} -c^T \\ -A \end{bmatrix} and h = \begin{bmatrix}d \\ b \end{bmatrix}
+
+*** Portfolio Problem Specification
+To specify a portfolio optimization problem, you need the following:
+
+- Proxy for portfolio return (μ)
+- Proxy for portfolio risk (Σ)
+- Set of feasible portfolios (X), called a portfolio set
+
+*** 多种限制条件：
+- 个股数量限制；
+- 个股权重限制；
+- 行业权重限制；
+- 风格因子暴露限制。
+当未输入限制条件时，默认权重限制为（0，1），默认风格因子暴露为RISK MODEL计算得到的值上下浮动0.000009。
+
+*** 不同的警告提示：
+当输入的限制条件无法使得系统得出目标最优解时，会提示原因，找到何种限制条件无法满足。
+* simulation/backtest
+* factor tests
+* strategy
+
+** monitor global etf performance
+*** TODO fetch global etf data
+- [ ] use threading to do multi-task. Fully understanding threading.
+*** use PCA to get most dominant stocks.
+* Graphic Strategist
+** FS 拓扑
+- Function Define, Function Define + Parameters -> Function Instance.
+把FD绑定参数之后生成FI.
+- Function Define -> Function Sampling.
+FS由FD搭建。
+- Function Sampling Define, Function Sampling Instance.
+也可以通过把FSD绑定参数，产生FSI。
+- Function Queue, Function Queue Instance.
+当FS跑出大量FSI之后，需要设置筛选条件来取出符合要求的FSI，这个时候需要设定FQ，同时通过FQI来取目标FSI。
+
+** 单因子流程
+
+** 文档
+
+** 股票因子
+** 股票策略
+** 函数采样
+** 函数定义
