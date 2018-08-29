@@ -59,6 +59,9 @@ It is used for multiple ways, e.g. portfolio optimization, portfolio return &ris
 
 * factor model
 [[file:./factor/readme.org][Factor Model]]
+
+[[./factor/images/factor_model.jpg]]
+
 To find alpha by a factor.
 1. Select stocks by quantile using a factor screener.
 2. Generate a portfolio with equally weighted stocks.
@@ -75,6 +78,7 @@ The fundamental introduction of these optimization methods and how-to run instru
 
 - [[file:./optimization/risk_parity/readme.org][Risk Parity]]
 [[./optimization/risk_parity/images/balanced_risk_allocation.png]]
+
 * simulation/backtest
 Backtest a portfolio with data like price, volume, stock portfolio weight, trading cost, dividend, splits, etc.
 
