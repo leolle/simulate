@@ -1,0 +1,36 @@
+#+OPTIONS: ':nil *:t -:t ::t <:t H:3 \n:nil ^:t arch:headline author:t c:nil
+#+OPTIONS: creator:nil d:(not "LOGBOOK") date:t e:t email:nil f:t inline:t
+#+OPTIONS: num:t p:nil pri:nil prop:nil stat:t tags:t tasks:t tex:auto timestamp:t
+#+OPTIONS: title:t toc:t todo:t |:t
+#+TITLES: README
+#+DATE: <2017-06-21 Wed>
+#+AUTHORS: weiwu
+#+EMAIL: victor.wuv@gmail.com
+#+LANGUAGE: en
+#+SELECT_TAGS: export
+#+EXCLUDE_TAGS: noexport
+#+CREATOR: Emacs 24.5.1 (Org mode 8.3.4)
+
+* Risk Parity Optimization
+# Risk parity on three assets, 南华商品，中债净价(3-5年)，沪深300
+- 风险平价策略: 对组合中不同资产分配相同的风险权重的一种投资策略
+
+> 风险平价（Risk Parity）策略通过平衡分配不同资产类别在组合风险中的贡献度，实现了投资组合的风险结构优化。通过风险平价配置，投资组合不会暴露在单一资产类别的风险敞口中，因而可以在风险平衡的基础上实现理想的投资收益。
+
+- 风险平价策略应用于大类资产配置
+
+本报告将同时对股票、债券和大宗商品三个资产组合，运用以下策略进行对比
+>- 等权重策略
+>- 最小方差策略
+>- 简单风险平价策略及
+>- 优化风险平价策略。
+
+等权重组合的年化收益率为 2.72%，年化波动率为 0.11，夏普比率为0.26，最大回撤为25.81%；最小方差组合的年化收益率为-0.38%，年化波动率为0.01， 夏普比率为 -0.26，最大回撤为 8.31%；简单风险平价组合的年化收益率为 0.21%，年化波动率为 0.02，夏普比率为 0.09，最大回撤为 9.51%；最优风险平价组合的年化收益率为 2.50%， 年化波动率为 0.08，夏普比率为 0.29，最大回撤为 20.30%。
+
+策略的具体实施:
+为对比资产配置效果，本次对标的资产组合处理如下：
+>- 对各策略进行滚动测试，每3个月进行仓位调整
+>- 自 2008 年 8 月起对标的组合进行测试，选取半年作为样本期，滚动计算样本期内组合的协方差矩阵以作为下一期协方差矩阵的估计
+>- 将所得的协方差矩阵作为模型参数，求解未来下一月的持仓权重；
+
+### visualize normalized index with start value of 100
