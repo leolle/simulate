@@ -49,7 +49,7 @@ export PYTHONPATH=./lib/:$PYTHONPATH
 #+END_SRC
 
 * Risk Model:
-[[file:./risk_model/readme.org][Risk Modeling]]
+[[https://github.com/leolle/simulate/tree/master/risk_model][Risk Modeling]]
 
 [[./risk_model/images/input_workflow.png]]
 
@@ -58,7 +58,7 @@ Risk model is a multi-factor model using linear regression to measure the overal
 It is used for multiple ways, e.g. portfolio optimization, portfolio return &risk contribution.
 
 * factor model
-[[file:./factor/readme.org][Factor Model]]
+[[https://github.com/leolle/simulate/tree/master/factor][Factor Model]]
 
 [[./factor/images/factor_model.jpg]]
 
@@ -70,16 +70,18 @@ To find alpha by a factor.
 There are three optimization strategies provided in the library, mvo, black litterman and risk parity.
 
 The fundamental introduction of these optimization methods and how-to run instruction are listed under below.
-- [[file:./optimization/mean_variance/readme.org][Mean Variance Optimization]]
+- [[https://github.com/leolle/simulate/tree/master/optimization/mean_variance/][Mean Variance Optimization]]
 [[./optimization/mean_variance/images/markowitz.png]]
 
-- [[file:./optimization/black_litterman/readme.org][Black Litterman]]
-[[./optimization/black_litterman/images/black_litterman.png]]
-
-- [[file:./optimization/risk_parity/readme.md][Risk Parity]]
+- [[https://github.com/leolle/simulate/tree/master/optimization/risk_parity][Risk Parity]]
 [[./optimization/risk_parity/images/balanced_risk_allocation.png]]
 
+- [[https://github.com/leolle/simulate/tree/master/optimization/black_litterman][Black Litterman]]
+[[./optimization/black_litterman/images/black_litterman.png]]
+
 * simulation/backtest
+[[https://github.com/leolle/simulate/tree/master/backtest][backtest]]
+
 Backtest a portfolio with data like price, volume, stock portfolio weight, trading cost, dividend, splits, etc.
 
 * strategy

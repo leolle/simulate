@@ -1,0 +1,56 @@
+#+OPTIONS: ':nil *:t -:t ::t <:t H:3 \n:nil ^:t arch:headline author:t c:nil
+#+OPTIONS: creator:nil d:(not "LOGBOOK") date:t e:t email:nil f:t inline:t
+#+OPTIONS: num:t p:nil pri:nil prop:nil stat:t tags:t tasks:t tex:auto timestamp:t
+#+OPTIONS: title:t toc:t todo:t |:t
+#+TITLES: README
+#+DATE: <2017-06-21 Wed>
+#+AUTHORS: weiwu
+#+EMAIL: victor.wuv@gmail.com
+#+LANGUAGE: en
+#+SELECT_TAGS: export
+#+EXCLUDE_TAGS: noexport
+#+CREATOR: Emacs 24.5.1 (Org mode 8.3.4)
+
+* Backtest
+** features:
+- dividends payment and splits are considered in the simulation.
+- buy and sell is limited during stop trading condition when stock price rising or falling 10%.
+- minimum holding shares are 100 share/lot.
+
+** input:
+dt_begin, 开始交易日期，在rebalance之前，repeat initial holding,
+                            在rebalance之后，从begin date开始交易。
+
+dt_end, 结束日期
+
+initial_holding_position, 输入持仓，可能为一个dataframe, 也有可能是一个数量cash
+
+df_w_target_portfolio_weight, 目标持仓权重，每行总和应等于1
+
+df_w_market_price, 股票价格
+
+df_w_total_return_factor, 复权因子计算
+
+df_w_execute_price, 交易股票执行价格
+
+df_w_execute_price_return, 每只股票交易日的回报
+
+df_w_trade_volume, 每只股票交易日的交易量
+
+dict_trading_param, 交易参数
+
+additionalTs，月平衡策略参数
+** output:
+result, 字典
+
+result['HOLDING'], 所有股票持仓和现金数据 OTV	all dates
+
+result['PORTFOLIO_VALUE']， 组合总价值 TV	monthly
+
+result['SINGLE_PERIOD_RETURN']， 组合每日回报 TV	all dates
+
+result['WEIGHTS']，组合中各项权重 OTV	all dates
+
+result['CUMULATIVE_RETURN']，累积收益 TV	all dates
+
+result['TURNOVER']，换手率 TV	monthly
